@@ -1,0 +1,30 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'expo.modules.schoolmedia'
+version = '1.0.0'
+
+// Keep in step with the Media3 version used by expo-video (node_modules/expo-video/android/build.gradle).
+// An app must use a single Media3 version; __tests__/media3-version.test.ts checks this.
+def media3Version = '1.9.0'
+
+android {
+  namespace 'expo.modules.schoolmedia'
+  defaultConfig {
+    versionCode 1
+    versionName '1.0.0'
+  }
+  lintOptions {
+    abortOnError false
+  }
+}
+
+dependencies {
+  implementation "androidx.media3:media3-transformer:${media3Version}"
+  implementation "androidx.media3:media3-effect:${media3Version}"
+  implementation "androidx.media3:media3-common:${media3Version}"
+
+  testImplementation 'junit:junit:4.13.2'
+}

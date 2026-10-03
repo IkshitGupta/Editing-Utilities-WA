@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Edited photos, videos and notice cards are written to the app's own cache and files folders. -->
+<paths>
+  <cache-path name="cache" path="." />
+  <files-path name="files" path="." />
+  <external-cache-path name="external_cache" path="." />
+</paths>

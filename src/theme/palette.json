@@ -1,0 +1,24 @@
+{
+  "brand": {
+    "blue": "#1950C7",
+    "navy": "#0E2A6B",
+    "magenta": "#D90C80",
+    "pink": "#F7ACD5",
+    "blush": "#FDEAF4",
+    "yellow": "#FBE716",
+    "gold": "#B8860B",
+    "red": "#DD141C"
+  },
+  "ui": {
+    "background": "#FFFFFF",
+    "surface": "#F5F7FB",
+    "foreground": "#111827",
+    "muted": "#6B7280",
+    "border": "#E5E7EB",
+    "danger": "#DC2626",
+    "success": "#15803D",
+    "whatsapp": "#1DA851",
+    "facebook": "#1877F2",
+    "youtube": "#E62117"
+  }
+}

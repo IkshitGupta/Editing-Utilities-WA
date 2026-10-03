@@ -1,0 +1,64 @@
+{
+  "expo": {
+    "name": "Walnut Academy",
+    "slug": "walnut-academy-admin",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "walnutacademy",
+    "userInterfaceStyle": "light",
+    "platforms": ["android"],
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "android": {
+      "package": "com.walnutacademy.admin",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png",
+        "backgroundColor": "#FFFFFF"
+      },
+      "predictiveBackGestureEnabled": false,
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_MEDIA_LOCATION"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FFFFFF",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 200
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "isAccessMediaLocationEnabled": false,
+          "granularPermissions": ["photo", "video"]
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Allow Walnut Academy to take photos for school posts.",
+          "microphonePermission": false
+        }
+      ],
+      "expo-video",
+      "expo-sqlite",
+      "expo-image",
+      "expo-font",
+      "@react-native-community/datetimepicker",
+      "expo-asset",
+      "./plugins/with-app-ndk-version.js"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}
