@@ -69,6 +69,17 @@ export function clampCrop<T extends CropState>(source: Size, crop: T): T {
   return { ...crop, zoom: window.zoom, panX: window.panX, panY: window.panY };
 }
 
+// The crop window moved onto whole pixels at the output size, so each pixel is copied one to one
+// instead of being resampled.
+export function pixelAlignedWindow(window: Rect, output: Size, bounds: Size): Rect {
+  return {
+    x: clamp(Math.round(window.x), 0, Math.max(0, bounds.width - output.width)),
+    y: clamp(Math.round(window.y), 0, Math.max(0, bounds.height - output.height)),
+    width: output.width,
+    height: output.height,
+  };
+}
+
 // The largest rectangle of the given shape centred inside the container.
 export function fitRect(container: Size, aspect: number, margin = 0): Rect {
   const availableWidth = Math.max(1, container.width - margin * 2);

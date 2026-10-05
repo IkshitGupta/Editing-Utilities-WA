@@ -6,6 +6,15 @@ export type VideoInfo = {
   hasAudio: boolean;
   // Bits per second for the whole file, or 0 when the file doesn't say.
   bitrate: number;
+  // The video track's format, such as video/avc or video/hevc, or '' when unknown.
+  codec: string;
+};
+
+// A single frame saved as a JPEG in the app's cache.
+export type FrameResult = {
+  uri: string;
+  width: number;
+  height: number;
 };
 
 // Fractions of the (already rotated) frame, measured from the top-left corner.
@@ -36,6 +45,8 @@ export type RenderSpec = {
   musicVolume: number;
   // A transparent PNG at the output size holding the logo and text.
   overlayUri?: string | null;
+  // The saved video's file name, which the gallery shows.
+  fileName?: string | null;
 };
 
 export type RenderResult = {

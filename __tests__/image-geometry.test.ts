@@ -3,6 +3,7 @@ import {
   cropWindow,
   fitRect,
   orientedSize,
+  pixelAlignedWindow,
   rotateClockwise,
   rotateCounterClockwise,
 } from '@/features/image-editor/geometry';
@@ -64,6 +65,25 @@ describe('image crop geometry', () => {
     expect(zoomed).toMatchObject({ width: 2000, height: 1500, x: 1000, y: 750 });
     expect(cropWindow({ width: 4000, height: 3000 }, crop({ zoom: 50 })).zoom).toBe(5);
     expect(cropWindow({ width: 4000, height: 3000 }, crop({ zoom: 0.2 })).zoom).toBe(1);
+  });
+
+  it('puts a full-size crop on whole pixels inside the photo', () => {
+    const photo = { width: 4032, height: 3024 };
+    // A 4:5 crop of a 3024-pixel-tall photo is 2419.2 pixels wide.
+    const window = cropWindow(photo, crop({ shape: 'portrait' }));
+    expect(pixelAlignedWindow(window, { width: 2419, height: 3024 }, photo)).toEqual({
+      x: 806,
+      y: 0,
+      width: 2419,
+      height: 3024,
+    });
+    const atEdge = { x: 1612.6, y: 0.4, width: 2419.4, height: 3023.6 };
+    expect(pixelAlignedWindow(atEdge, { width: 2419, height: 3024 }, photo)).toEqual({
+      x: 1613,
+      y: 0,
+      width: 2419,
+      height: 3024,
+    });
   });
 
   it('measures crops on the turned photo', () => {

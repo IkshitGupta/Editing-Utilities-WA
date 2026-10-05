@@ -9,7 +9,7 @@ export type VideoShapeId = 'original' | 'landscape' | 'tall' | 'square';
 export const VIDEO_SHAPES: Record<VideoShapeId, { label: string; aspect: number | null }> = {
   original: { label: 'Original', aspect: null },
   landscape: { label: 'Wide 16:9', aspect: 16 / 9 },
-  tall: { label: 'Tall 9:16 (Shorts, Reels)', aspect: 9 / 16 },
+  tall: { label: 'Tall 9:16', aspect: 9 / 16 },
   square: { label: 'Square', aspect: 1 },
 };
 
@@ -18,9 +18,9 @@ export const VIDEO_SHAPES: Record<VideoShapeId, { label: string; aspect: number 
 const MAX_LONG_SIDE = 3840;
 const MAX_SHORT_SIDE = 2160;
 
-// Bits per second for each pixel of the frame. Phones record 1080p video at about 8, and
-// 4K video at about 6. Re-encoding at the source's own rate keeps its detail; the floor stops
-// already-compressed videos, such as ones received on WhatsApp, from losing more.
+// Bits per second for each pixel of the frame. Phones record 1080p H.264 video at about 8, and
+// 4K at about 6. Re-encoding at the source's own rate, in H.264 terms, keeps its detail; the floor
+// stops already-compressed videos, such as ones received on WhatsApp, from losing more.
 const MIN_BITS_PER_PIXEL = 4;
 const UNKNOWN_BITS_PER_PIXEL = 8;
 const MIN_VIDEO_BITRATE = 1_000_000;
@@ -43,19 +43,29 @@ export function outputVideoSize(aspect: number, sourceShortSide: number): Size {
   return { width: even(width * scale), height: even(height * scale) };
 }
 
-export type BitrateSource = { width: number; height: number; bitrate: number };
+export type BitrateSource = { width: number; height: number; bitrate: number; codec?: string };
+
+// Saved videos are H.264. Newer formats store the same detail in fewer bits, so their rate is
+// raised to what H.264 needs for that detail.
+const H264_BITS_FOR_CODEC: Record<string, number> = {
+  'video/hevc': 1.6,
+  'video/dolby-vision': 1.6,
+  'video/x-vnd.on2.vp9': 1.6,
+  'video/av01': 2,
+};
+
+function sourceBitsPerPixel(clip: BitrateSource): number {
+  if (clip.bitrate <= 0 || clip.width <= 0 || clip.height <= 0) {
+    return UNKNOWN_BITS_PER_PIXEL;
+  }
+  const factor = H264_BITS_FOR_CODEC[clip.codec ?? ''] ?? 1;
+  return (clip.bitrate / (clip.width * clip.height)) * factor;
+}
 
 // Uses the highest bits per pixel among the clips, so the saved video is as detailed as the
 // best of them.
 export function videoBitrate(size: Size, clips: readonly BitrateSource[]): number {
-  const bitsPerPixel = Math.max(
-    MIN_BITS_PER_PIXEL,
-    ...clips.map((clip) =>
-      clip.bitrate > 0 && clip.width > 0 && clip.height > 0
-        ? clip.bitrate / (clip.width * clip.height)
-        : UNKNOWN_BITS_PER_PIXEL
-    )
-  );
+  const bitsPerPixel = Math.max(MIN_BITS_PER_PIXEL, ...clips.map(sourceBitsPerPixel));
   return Math.round(
     clamp(bitsPerPixel * size.width * size.height, MIN_VIDEO_BITRATE, MAX_VIDEO_BITRATE)
   );

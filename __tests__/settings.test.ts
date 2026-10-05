@@ -14,22 +14,34 @@ describe('settings', () => {
 
   it('keeps valid saved values', () => {
     expect(
-      parseSettings({ schoolName: '  Walnut Academy Jaipur ', whatsappApp: 'personal' })
+      parseSettings({
+        schoolName: '  Walnut Academy Jaipur ',
+        whatsappApp: 'personal',
+        mediaAccessAnsweredFor: 1791196821000,
+      })
     ).toMatchObject({
       schoolName: 'Walnut Academy Jaipur',
       whatsappApp: 'personal',
       address: SCHOOL.address,
+      mediaAccessAnsweredFor: 1791196821000,
     });
   });
 
   it('falls back field by field when a saved value is broken', () => {
     expect(
-      parseSettings({ schoolName: '   ', whatsappApp: 'myspace', phone: 42, address: '' })
+      parseSettings({
+        schoolName: '   ',
+        whatsappApp: 'myspace',
+        phone: 42,
+        address: '',
+        mediaAccessAnsweredFor: true,
+      })
     ).toMatchObject({
       schoolName: SCHOOL.name,
       whatsappApp: 'business',
       phone: SCHOOL.phone,
       address: '',
+      mediaAccessAnsweredFor: null,
     });
   });
 

@@ -37,4 +37,7 @@ class RenderSpec : Record {
 
   // A transparent PNG at the output size holding the logo and text.
   @Field val overlayUri: String? = null
+
+  // The saved video's file name, which the gallery shows.
+  @Field val fileName: String? = null
 }

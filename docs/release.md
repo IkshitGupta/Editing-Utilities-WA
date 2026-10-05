@@ -98,7 +98,7 @@ $env:CI = '1'; npm start
 
 1. Open the APK link on the phone and download the file.
 2. Open it and tap **Install**. If Android asks, allow the browser to install apps.
-3. Open the app and allow access to photos and videos.
+3. Open the app. On Android 10 or older, allow access to photos and videos.
 
 To install over USB instead, run `adb install path\to\app.apk`. A newer APK installs over the old one and keeps the settings.
 
@@ -116,22 +116,22 @@ Native changes need a new APK: the Kotlin module, native packages, `app.json` pl
 
 ## Phone checklist
 
-The app was tested on an Android 15 emulator on 1 October 2026:
+The app was tested on an Android 15 emulator between 1 and 5 October 2026:
 
 - photo editing and saving
-- notice cards
-- video trimming, joining, music and export
-- thumbnails from rotated videos
-- the Media tab, the share sheet and the YouTube upload hand-off
-- settings and permissions
+- notice cards, including the warnings for text that doesn't fit
+- video trimming, joining, music and export, including HEVC sources
+- thumbnails from rotated videos, taken from the paused frame
+- the Media tab (newest first, more than one page, deleting), the share sheet and the YouTube upload hand-off
+- settings and permissions, including access to selected photos only
 
 These still need a real phone:
 
 - [ ] Save a 2–3 minute video and note how long it takes and how big the file is. The emulator encodes in software, so its timings don't apply.
 - [ ] If the phone records 4K, save a 4K video and check it plays. A phone that can't encode 4K should save at a smaller size instead of failing.
-- [ ] Compare an edited photo and video with the originals at full size; they should look equally sharp.
+- [ ] Compare an edited photo and video with the originals at full size; they should look equally sharp. If the camera records HEVC ("High efficiency") video, include one.
 - [ ] Open the app and check the whole logo shows on the start-up screen.
 - [ ] Share 20–30 photos at once to WhatsApp Business and to Facebook, and check Facebook posts as the school Page.
 - [ ] Share a video to YouTube, sign in and upload it.
 - [ ] Pinch to zoom a photo and to resize text.
-- [ ] Save a thumbnail from a portrait video recorded on the phone and check it's the right way up.
+- [ ] Pause a portrait video recorded on the phone, save the frame as a thumbnail and check it's the right way up and matches the picture the preview shows after saving.

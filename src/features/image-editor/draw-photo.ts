@@ -10,19 +10,26 @@ import {
 } from '@shopify/react-native-skia';
 
 import type { MediaItem } from '@/features/media/types';
+import { prepareImage } from '@/features/media/prepare-image';
 import { drawOverlays, type OverlayAssets } from '@/features/overlays/draw';
-import { outputFile, writeBytes } from '@/lib/files';
+import { deleteTemporaryFile, outputFile, writeBytes } from '@/lib/files';
 import { renderToBytes } from '@/lib/skia';
 
-import { cropWindow, orientedSize, type Rect } from './geometry';
+import { cropWindow, orientedSize, pixelAlignedWindow, type Rect } from './geometry';
 import { OUTPUT_PRESETS, outputSize } from './presets';
 import type { CropState, ImageEdit } from './types';
 
 // Draws the rotated, flipped and cropped photo so the crop fills `frame`. Parts of the photo
 // outside the crop are still drawn, which lets the editor show them dimmed around the frame.
-export function drawPhoto(canvas: SkCanvas, image: SkImage, crop: CropState, frame: Rect) {
+export function drawPhoto(
+  canvas: SkCanvas,
+  image: SkImage,
+  crop: CropState,
+  frame: Rect,
+  area?: Rect
+) {
   const source = { width: image.width(), height: image.height() };
-  const window = cropWindow(source, crop);
+  const window = area ?? cropWindow(source, crop);
   const oriented = orientedSize(source, crop.rotation);
 
   canvas.save();
@@ -83,20 +90,32 @@ export async function loadSkImage(uri: string): Promise<SkImage> {
   return image;
 }
 
+// Decodes a chosen photo for editing. The upright copy made on the way is removed once read.
+export async function loadEditablePhoto(uri: string): Promise<SkImage> {
+  const prepared = await prepareImage(uri);
+  try {
+    return await loadSkImage(prepared.uri);
+  } finally {
+    deleteTemporaryFile(prepared.uri);
+  }
+}
+
 // Draws the final photo at full output size and saves it as a JPEG, which carries no location data.
 export function exportPhoto(image: SkImage, edit: ImageEdit, assets: OverlayAssets): MediaItem {
-  const size = editedSize(image, edit);
+  const source = { width: image.width(), height: image.height() };
+  const window = cropWindow(source, edit);
+  const preset = OUTPUT_PRESETS[edit.output];
+  const size = outputSize(preset, window.width, window.height);
+  // At the photo's own size the crop lands on whole pixels, so nothing is resampled.
+  const area = preset.width
+    ? window
+    : pixelAlignedWindow(window, size, orientedSize(source, edit.rotation));
   const frame = { x: 0, y: 0, width: size.width, height: size.height };
-  const bytes = renderToBytes(
-    size,
-    ImageFormat.JPEG,
-    OUTPUT_PRESETS[edit.output].jpegQuality,
-    (canvas) => {
-      canvas.clear(Skia.Color('#FFFFFF'));
-      drawPhoto(canvas, image, edit, frame);
-      drawOverlays(canvas, edit.overlays, edit.logo, size, assets);
-    }
-  );
+  const bytes = renderToBytes(size, ImageFormat.JPEG, preset.jpegQuality, (canvas) => {
+    canvas.clear(Skia.Color('#FFFFFF'));
+    drawPhoto(canvas, image, edit, frame, area);
+    drawOverlays(canvas, edit.overlays, edit.logo, size, assets);
+  });
   const file = outputFile('edited-photos', 'jpg');
   return {
     uri: writeBytes(file, bytes),

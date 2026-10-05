@@ -17,7 +17,7 @@ import type { WhatsAppChoice } from '@/features/settings/settings';
 import { updateSettings, useSettings } from '@/features/settings/store';
 import { isAppInstalled } from '@/features/share/share';
 import { APPS, type AppInfo } from '@/features/share/targets';
-import { errorMessage } from '@/lib/errors';
+import { errorCode, errorMessage } from '@/lib/errors';
 import { SCHOOL } from '@/school/defaults';
 import { ui } from '@/theme/colors';
 
@@ -25,6 +25,10 @@ const WHATSAPP_OPTIONS = [
   { value: 'business', label: APPS.whatsappBusiness.label },
   { value: 'personal', label: APPS.whatsapp.label },
 ] as const satisfies readonly { value: WhatsAppChoice; label: string }[];
+
+// Checking for and downloading an update fail mostly when the phone is offline, and the updates
+// library leaves the cause out of its message.
+const UPDATE_SERVER_ERRORS = ['ERR_UPDATES_CHECK', 'ERR_UPDATES_FETCH'];
 
 function InstallNote({ app, installed }: { app: AppInfo; installed: boolean | undefined }) {
   if (installed === undefined) {
@@ -122,7 +126,13 @@ export default function SettingsScreen() {
         { text: 'Restart', onPress: () => Updates.reloadAsync() },
       ]);
     } catch (error) {
-      Alert.alert('Could not check for updates', errorMessage(error));
+      const code = errorCode(error);
+      Alert.alert(
+        'Could not check for updates',
+        code && UPDATE_SERVER_ERRORS.includes(code)
+          ? 'Check the internet connection and try again.'
+          : errorMessage(error)
+      );
     } finally {
       setChecking(false);
     }

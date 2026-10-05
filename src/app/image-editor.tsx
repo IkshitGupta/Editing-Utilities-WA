@@ -15,7 +15,7 @@ import { BusyModal } from '@/components/busy-modal';
 import { EmptyState } from '@/components/empty-state';
 import { ToolTabs, type ToolTab } from '@/components/tool-tabs';
 import { Button } from '@/components/ui/button';
-import { exportPhoto, editedSize, loadSkImage } from '@/features/image-editor/draw-photo';
+import { exportPhoto, editedSize, loadEditablePhoto } from '@/features/image-editor/draw-photo';
 import { clampCrop } from '@/features/image-editor/geometry';
 import { CropPanel, SizePanel } from '@/features/image-editor/panels';
 import {
@@ -25,7 +25,6 @@ import {
 } from '@/features/image-editor/photo-canvas';
 import type { ImageEdit } from '@/features/image-editor/types';
 import { saveToAlbum } from '@/features/media/album';
-import { prepareImage } from '@/features/media/prepare-image';
 import type { MediaItem } from '@/features/media/types';
 import { useLogoImage, useOverlayFonts } from '@/features/overlays/assets';
 import { applyOverlayChange, type OverlayChange } from '@/features/overlays/layout';
@@ -40,6 +39,7 @@ import {
   type TextOverlay,
 } from '@/features/overlays/types';
 import { errorMessage } from '@/lib/errors';
+import { deleteTemporaryFile } from '@/lib/files';
 import { plural } from '@/lib/format';
 import { putTransfer, readTransfer } from '@/lib/transfer';
 import { waitForPaint } from '@/lib/utils';
@@ -89,14 +89,21 @@ export default function ImageEditorScreen() {
   const logo = useLogoImage();
   const assets = { fonts, logo };
 
-  const [index, setIndex] = useState(0);
+  // Positions in `items` still to edit, in order; the first one is on screen. After "Save all",
+  // only the photos that could not be saved remain, so trying again never saves one twice.
+  const [pending, setPending] = useState<number[]>(() => items.map((_, position) => position));
   const [loaded, setLoaded] = useState<Loaded | null>(null);
+  // Raised by "Try again" to load the photo on screen once more.
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [edit, setEdit] = useState<ImageEdit>(() => freshEdit());
   const [tool, setTool] = useState<Tool>('crop');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [busy, setBusy] = useState<Busy | null>(null);
   const saved = useRef<MediaItem[]>([]);
+  // Blocks a second save from a quick double tap before the busy screen appears.
+  const saving = useRef(false);
 
+  const index = pending[0] ?? 0;
   const currentUri = items[index]?.uri;
   const image = loaded?.uri === currentUri ? loaded.image : null;
   const loadError = loaded?.uri === currentUri ? loaded.error : null;
@@ -106,27 +113,31 @@ export default function ImageEditorScreen() {
       return;
     }
     let cancelled = false;
-    prepareImage(currentUri)
-      .then((prepared) => loadSkImage(prepared.uri))
-      .then(
-        (result) => {
-          if (!cancelled) {
-            setLoaded({ uri: currentUri, image: result, error: null });
-          }
-        },
-        (error: unknown) => {
-          if (!cancelled) {
-            setLoaded({ uri: currentUri, image: null, error: errorMessage(error) });
-          }
+    loadEditablePhoto(currentUri).then(
+      (result) => {
+        if (!cancelled) {
+          setLoaded({ uri: currentUri, image: result, error: null });
         }
-      );
+      },
+      (error: unknown) => {
+        if (!cancelled) {
+          setLoaded({ uri: currentUri, image: null, error: errorMessage(error) });
+        }
+      }
+    );
     return () => {
       cancelled = true;
     };
-  }, [currentUri]);
+  }, [currentUri, loadAttempt]);
 
   // Frees the decoded photo as soon as the editor moves on from it.
   useEffect(() => () => image?.dispose(), [image]);
+
+  // The picker's copies of the chosen photos are only needed while this screen is open.
+  useEffect(() => {
+    const picked = readTransfer<MediaItem[]>(params.transfer) ?? [];
+    return () => picked.forEach((item) => deleteTemporaryFile(item.uri));
+  }, [params.transfer]);
 
   if (items.length === 0) {
     return (
@@ -187,7 +198,7 @@ export default function ImageEditorScreen() {
   };
 
   const selected = edit.overlays.find((overlay) => overlay.id === selectedId) ?? null;
-  const remaining = items.length - index;
+  const remaining = pending.length;
 
   const finish = () => {
     if (saved.current.length === 0) {
@@ -198,20 +209,32 @@ export default function ImageEditorScreen() {
   };
 
   const goNext = () => {
-    if (index + 1 >= items.length) {
+    if (pending.length <= 1) {
       finish();
       return;
     }
-    setIndex(index + 1);
+    setPending(pending.slice(1));
     setEdit((previous) => freshEdit(previous));
     setSelectedId(null);
     setTool('crop');
   };
 
+  const skip = () => {
+    if (!saving.current) {
+      goNext();
+    }
+  };
+
+  const retryLoad = () => {
+    setLoaded(null);
+    setLoadAttempt((attempt) => attempt + 1);
+  };
+
   const saveCurrent = async () => {
-    if (!image) {
+    if (!image || saving.current) {
       return;
     }
+    saving.current = true;
     setBusy({ title: 'Saving photo…', progress: null });
     try {
       await waitForPaint();
@@ -221,39 +244,63 @@ export default function ImageEditorScreen() {
       Alert.alert('Could not save this photo', errorMessage(error));
     } finally {
       setBusy(null);
+      saving.current = false;
     }
   };
 
   // Saves this photo as edited, then gives every remaining photo the same shape, logo and size.
+  // Photos that can't be saved stay open to try again; the others are never saved twice.
   const saveAllRemaining = async () => {
-    if (!image) {
+    if (!image || saving.current) {
       return;
     }
+    saving.current = true;
     const later = freshEdit(edit);
-    setBusy({ title: `Saving ${plural(remaining, 'photo')}…`, progress: 0 });
+    const queue = pending;
+    const title = `Saving ${plural(queue.length, 'photo')}…`;
+    const failed: number[] = [];
+    let firstError = '';
     try {
-      await waitForPaint();
-      saved.current.push(await saveToAlbum(exportPhoto(image, edit, assets)));
-      for (let position = index + 1; position < items.length; position += 1) {
-        setBusy({
-          title: `Saving ${plural(remaining, 'photo')}…`,
-          progress: ((position - index) / remaining) * 100,
-        });
+      for (let step = 0; step < queue.length; step += 1) {
+        setBusy({ title, progress: (step / queue.length) * 100 });
         await waitForPaint();
-        const prepared = await prepareImage(items[position].uri);
-        const next = await loadSkImage(prepared.uri);
         try {
-          saved.current.push(await saveToAlbum(exportPhoto(next, later, assets)));
-        } finally {
-          next.dispose();
+          if (step === 0) {
+            saved.current.push(await saveToAlbum(exportPhoto(image, edit, assets)));
+          } else {
+            const next = await loadEditablePhoto(items[queue[step]].uri);
+            try {
+              saved.current.push(await saveToAlbum(exportPhoto(next, later, assets)));
+            } finally {
+              next.dispose();
+            }
+          }
+        } catch (error) {
+          failed.push(queue[step]);
+          const message = errorMessage(error);
+          firstError ||= message;
         }
       }
-      finish();
-    } catch (error) {
-      Alert.alert('Could not save all photos', errorMessage(error));
     } finally {
       setBusy(null);
+      saving.current = false;
     }
+    if (failed.length === 0) {
+      finish();
+      return;
+    }
+    // The photo on screen keeps its own edits if it failed; a later photo opens with the shape,
+    // logo and size "Save all" gave it.
+    if (failed[0] !== queue[0]) {
+      setEdit(later);
+      setSelectedId(null);
+      setTool('crop');
+    }
+    setPending(failed);
+    Alert.alert(
+      `Could not save ${plural(failed.length, 'photo')}`,
+      `${failed.length === 1 ? 'The photo is' : 'These photos are'} still open, so you can try again.\n\n${firstError}`
+    );
   };
 
   const changeTool = (next: Tool) => {
@@ -320,10 +367,15 @@ export default function ImageEditorScreen() {
             onOverlayChange={changeOverlay}
           />
         ) : loadError ? (
-          <View className="flex-1 items-center justify-center gap-3 bg-surface px-8">
-            <Text className="text-center text-base text-foreground">{loadError}</Text>
-            <Button variant="secondary" label="Skip this photo" onPress={goNext} />
-          </View>
+          <ScrollView
+            className="flex-1 bg-surface"
+            contentContainerClassName="flex-grow items-center justify-center gap-3 px-8 py-6">
+            <Text className="text-center text-base text-foreground" numberOfLines={4}>
+              {loadError}
+            </Text>
+            <Button label="Try again" onPress={retryLoad} />
+            <Button variant="secondary" label="Skip this photo" onPress={skip} />
+          </ScrollView>
         ) : (
           <View className="flex-1 items-center justify-center bg-surface">
             <ActivityIndicator size="large" color={brand.blue} />
@@ -341,12 +393,12 @@ export default function ImageEditorScreen() {
         className="gap-2 border-t border-border px-4 pt-3"
         style={{ paddingBottom: insets.bottom + 12 }}>
         <View className="flex-row gap-2">
-          {items.length > 1 ? <Button variant="secondary" label="Skip" onPress={goNext} /> : null}
+          {items.length > 1 ? <Button variant="secondary" label="Skip" onPress={skip} /> : null}
           <Button
             className="flex-1"
             icon="checkmark"
             label={remaining > 1 ? 'Save and next' : 'Save photo'}
-            disabled={!image}
+            disabled={!image || busy !== null}
             onPress={saveCurrent}
           />
         </View>
@@ -357,7 +409,7 @@ export default function ImageEditorScreen() {
               variant="ghost"
               icon="albums-outline"
               label={`Save all ${remaining} photos`}
-              disabled={!image}
+              disabled={!image || busy !== null}
               onPress={saveAllRemaining}
             />
             <Text className="text-xs text-muted">

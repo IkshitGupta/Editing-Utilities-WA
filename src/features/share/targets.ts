@@ -45,12 +45,12 @@ export function checkShare(destination: ShareDestination, kinds: MediaKind[]): S
     return { ok: false, message: 'Select at least one photo or video.' };
   }
   if (destination === 'youtube' && (kinds.length !== 1 || kinds[0] !== 'video')) {
-    return { ok: false, message: 'YouTube accepts one video at a time. Select a single video.' };
+    return { ok: false, message: 'Select one video to upload to YouTube.' };
   }
   if (destination === 'whatsapp' && kinds.length > WHATSAPP_MAX_ITEMS) {
     return {
       ok: false,
-      message: `WhatsApp accepts up to ${WHATSAPP_MAX_ITEMS} photos and videos at a time. Select fewer items.`,
+      message: `Select up to ${WHATSAPP_MAX_ITEMS} photos and videos to share at once.`,
     };
   }
   return { ok: true };

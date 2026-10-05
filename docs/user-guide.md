@@ -6,7 +6,7 @@ The Walnut Academy app gets photos, videos and notices ready on your phone and p
 
 1. On your phone, open the install link you were sent.
 2. Download the file, open it and tap **Install**. If the phone asks, allow your browser to install apps.
-3. Open **Walnut Academy**. When asked, allow access to photos and videos.
+3. Open **Walnut Academy**. On Android 10 or older, allow access to photos and videos when asked.
 
 The school name, logo, address and phone are already filled in. You can change them in **Settings**.
 
@@ -64,7 +64,7 @@ The app saves photos and videos at full quality. Tap **HD** in WhatsApp so they 
 3. Choose a design (Letterhead, Colour band or Simple), colours and size (Square, or Portrait 4:5 for longer notices).
 4. Tap **Save notice card**. The share buttons appear straight away.
 
-If a notice is too long to fit, the app tells you. Shorten it or choose Portrait 4:5.
+If the title, the notice or the school details are too long to fit, the app says which. Shorten it, or choose Portrait 4:5 for a longer notice.
 
 ## Edit photos
 
@@ -74,9 +74,9 @@ On **Home**, tap **Edit photos** and pick one or more photos, or tap **Take a ph
 - **Text**: tap **Add text**, type, and pick a colour and style. Text starts with a soft **Shadow** so it reads on any photo; choose **Background** to put it on a box. Drag the text to move it and pinch to resize it. The dashed outline marks the selected text and isn't saved.
 - **Shapes**: add a rectangle, circle, arrow or line to point something out or underline it. A line can be horizontal or vertical.
 - **Logo**: add the school logo. **Solid** puts it in a corner. **Watermark** makes it semi-transparent so the photo shows through, in the centre or a corner. Both come in small, medium or large.
-- **Size**: **Original size** keeps every pixel of the photo, for the best quality. **YouTube thumbnail** makes a 1280 × 720 picture.
+- **Size**: **Original size** keeps the photo's full resolution, up to 4096 pixels on the longer side. **YouTube thumbnail** makes a 1280 × 720 picture.
 
-Tap **Save and next** for each photo, or **Save all … photos** to give the rest the same shape, logo and size. Your original photos stay as they are.
+Tap **Save and next** for each photo, or **Save all … photos** to give the rest the same shape, logo and size. If a photo can't be saved, the others are still saved and that photo stays open so you can try again. Your original photos stay as they are.
 
 ## Edit a video
 
@@ -88,11 +88,11 @@ On **Home**, tap **Edit a video** and pick one or more videos. Several videos ar
 - **Logo & text**: add the school logo, solid or as a watermark, and a caption.
 - **Clips**: add more clips, change their order or remove one.
 
-Tap **Save video**. Keep the app open while it saves; the screen stays on until it's done. The video keeps the size and quality of the original, up to 4K.
+Tap **Save video**. Keep the app open while it saves; the screen stays on until it's done. The video keeps the original's size, up to 4K, and its detail. HDR videos are converted to standard colour so they look right on every phone.
 
 ## The Media tab
 
-Everything you save goes into the **School Admin** album on the phone and shows in the **Media** tab. Tap items to select them; the numbers show the order they'll be sent in. Then tap **WhatsApp**, **Facebook** or the YouTube button (for one video), or **Edit** or **Delete**.
+Everything you save goes into the **School Admin** album on the phone and shows in the **Media** tab, newest first. Tap items to select them; the numbers show the order they'll be sent in. Then tap **WhatsApp**, **Facebook** or the YouTube button (for one video), or **Edit** or **Delete**. You're asked to confirm before anything is deleted.
 
 ## Settings
 
@@ -105,7 +105,7 @@ Everything you save goes into the **School Admin** album on the phone and shows 
 
 The app updates itself over the internet and uses the new version the next time you open it. To get it straight away, go to **Settings** and tap **Check for updates**.
 
-Now and then a new install link is needed. Install it over the old app; your settings stay.
+Now and then a new install link is needed. Install it over the old app, without uninstalling it first; your settings stay.
 
 ## Privacy
 
@@ -116,5 +116,6 @@ Now and then a new install link is needed. Install it over the old app; your set
 ## If something goes wrong
 
 - **WhatsApp Business or Facebook isn't on the phone**: install it from the Play Store. For WhatsApp, you can also choose the other WhatsApp in **Settings**. Until then, the phone asks which app to use.
-- **The Media tab can't show photos**: tap **Open settings** and allow access to photos and videos.
+- **The Media tab can't show photos (Android 10 or older)**: tap **Open settings** and allow access to photos and videos.
+- **Items saved before the app was reinstalled are missing from the Media tab**: they're still in the phone's gallery. To show them in the Media tab too, tap **Allow access** at the end of the list and choose **Allow all** (**Allow** on Android 13 and older). The button goes away once you've answered. To change your answer later, open the phone's **Settings > Apps > Walnut Academy > Permissions** and allow all **Photos and videos** (called **Files and media** on older phones).
 - **A video takes a long time to save**: keep the app open. Long videos and 4K videos take longest.

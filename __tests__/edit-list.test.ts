@@ -18,6 +18,7 @@ const clip = (patch: Partial<VideoClip> = {}): VideoClip => ({
   durationMs: 60_000,
   hasAudio: true,
   bitrate: 16_000_000,
+  codec: 'video/avc',
   startMs: 0,
   endMs: 60_000,
   ...patch,
@@ -130,6 +131,15 @@ describe('render spec', () => {
     const spec = buildRenderSpec(edit(), null);
     expect(renderSpecSchema.safeParse({ ...spec, width: 1281 }).success).toBe(false);
     expect(renderSpecSchema.safeParse({ ...spec, clips: [] }).success).toBe(false);
+  });
+
+  it('accepts only plain MP4 file names for the saved video', () => {
+    const spec = buildRenderSpec(edit(), null);
+    const named = (fileName: string) => renderSpecSchema.safeParse({ ...spec, fileName }).success;
+    expect(named('walnut-academy-20261005-112931-d4fz.mp4')).toBe(true);
+    expect(named('../video.mp4')).toBe(false);
+    expect(named('folder/video.mp4')).toBe(false);
+    expect(named('video.jpg')).toBe(false);
   });
 });
 

@@ -5,6 +5,7 @@ import {
   containsPoint,
   isLightColor,
   logoRect,
+  shapeRect,
   WATERMARK_OPACITY,
 } from '@/features/overlays/layout';
 import {
@@ -130,6 +131,19 @@ describe('overlay layout', () => {
     expect(left.x).toBeLessThan(100);
     expect(right.x).toBeLessThan(100);
     expect(left.y).toBeCloseTo(20 - right.y);
+  });
+
+  it('keeps circles round on pictures of any shape', () => {
+    const circle = newShapeOverlay('circle');
+    const landscape = shapeRect(circle, { width: 4000, height: 3000 });
+    expect(landscape.width).toBe(landscape.height);
+    expect(landscape.width).toBeCloseTo(1050);
+    expect(landscape.x + landscape.width / 2).toBeCloseTo(2000);
+    const portrait = shapeRect(circle, { width: 3000, height: 4000 });
+    expect(portrait.width).toBe(portrait.height);
+    const box = shapeRect(newShapeOverlay('rectangle'), { width: 4000, height: 3000 });
+    expect(box.width).toBeCloseTo(1400);
+    expect(box.height).toBeCloseTo(1050);
   });
 
   it('tells light colours from dark ones', () => {

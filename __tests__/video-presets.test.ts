@@ -60,6 +60,14 @@ describe('video bitrate', () => {
     expect(videoBitrate(full, [{ width: 1920, height: 1080, bitrate: 0 }])).toBe(16_588_800);
   });
 
+  it('gives newer formats the extra bits H.264 needs for the same detail', () => {
+    const source = { width: 1920, height: 1080, bitrate: 9_000_000 };
+    expect(videoBitrate(full, [{ ...source, codec: 'video/hevc' }])).toBe(14_400_000);
+    expect(videoBitrate(full, [{ ...source, codec: 'video/av01' }])).toBe(18_000_000);
+    expect(videoBitrate(full, [{ ...source, codec: 'video/avc' }])).toBe(9_000_000);
+    expect(videoBitrate(full, [{ ...source, codec: '' }])).toBe(9_000_000);
+  });
+
   it('follows the most detailed of the joined clips', () => {
     const clips = [
       { width: 1280, height: 720, bitrate: 3_000_000 },

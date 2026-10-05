@@ -32,13 +32,13 @@ export const OUTPUT_PRESETS: Record<OutputPresetId, OutputPreset> = {
   original: {
     id: 'original',
     label: 'Original size',
-    hint: 'Full resolution, best quality',
+    hint: 'Full resolution, up to 4096 pixels',
     jpegQuality: 95,
   },
   'yt-thumbnail': {
     id: 'yt-thumbnail',
     label: 'YouTube thumbnail',
-    hint: '1280 × 720, the size YouTube recommends',
+    hint: '1280 × 720 pixels',
     shape: 'landscape',
     width: 1280,
     height: 720,

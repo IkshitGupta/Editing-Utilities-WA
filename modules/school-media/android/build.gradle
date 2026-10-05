@@ -25,6 +25,8 @@ dependencies {
   implementation "androidx.media3:media3-transformer:${media3Version}"
   implementation "androidx.media3:media3-effect:${media3Version}"
   implementation "androidx.media3:media3-common:${media3Version}"
+  implementation "androidx.media3:media3-muxer:${media3Version}"
+  implementation "androidx.media3:media3-container:${media3Version}"
 
   testImplementation 'junit:junit:4.13.2'
 }

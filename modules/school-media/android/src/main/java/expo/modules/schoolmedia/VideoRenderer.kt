@@ -67,7 +67,11 @@ class VideoRenderer(
 
   fun start(spec: RenderSpec, callbacks: Callbacks) {
     val folder = File(context.cacheDir, OUTPUT_FOLDER).apply { mkdirs() }
-    val outputFile = File(folder, "video-${System.currentTimeMillis()}.mp4")
+    // The gallery shows this name, so the app chooses it; anything other than a plain file name
+    // gets a generic one.
+    val name = spec.fileName?.takeIf { OUTPUT_NAME.matches(it) }
+      ?: "video-${System.currentTimeMillis()}.mp4"
+    val outputFile = File(folder, name)
     try {
       val composition = buildComposition(spec)
       val active = buildTransformer(spec, outputFile)
@@ -117,6 +121,7 @@ class VideoRenderer(
       .setVideoMimeType(MimeTypes.VIDEO_H264)
       .setAudioMimeType(MimeTypes.AUDIO_AAC)
       .setEncoderFactory(encoderFactory)
+      .setMuxerFactory(OutputMetadataMuxerFactory(keepCaptureRate = spec.clips.size == 1))
       .addListener(object : Transformer.Listener {
         override fun onCompleted(composition: Composition, exportResult: ExportResult) {
           val pending = callbacks
@@ -238,6 +243,7 @@ class VideoRenderer(
 
   companion object {
     private const val OUTPUT_FOLDER = "rendered-videos"
+    private val OUTPUT_NAME = Regex("[A-Za-z0-9_-]+\\.mp4")
     private const val PROGRESS_INTERVAL_MS = 500L
     private const val FULL_VOLUME = 0.999
 

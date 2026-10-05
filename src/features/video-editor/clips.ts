@@ -1,11 +1,12 @@
-import { ImageFormat, Skia } from '@shopify/react-native-skia';
+import { ImageFormat, Skia, type SkImage } from '@shopify/react-native-skia';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 
 import SchoolMedia, { type VideoInfo } from '@modules/school-media';
 
+import { loadSkImage } from '@/features/image-editor/draw-photo';
 import type { MediaItem } from '@/features/media/types';
 import { drawOverlays, type OverlayAssets } from '@/features/overlays/draw';
-import { outputFile, writeBytes } from '@/lib/files';
+import { deleteTemporaryFile, outputFile, writeBytes } from '@/lib/files';
 import { renderToBytes } from '@/lib/skia';
 import { newId } from '@/lib/utils';
 
@@ -28,12 +29,14 @@ export async function loadClip(item: MediaItem): Promise<VideoClip> {
     durationMs,
     hasAudio: info?.hasAudio ?? true,
     bitrate: info?.bitrate ?? 0,
+    codec: info?.codec ?? '',
     startMs: 0,
     endMs: durationMs,
   };
 }
 
 // Frames spread across the clip for the trim bar; a frame that cannot be read is skipped.
+// These are nearest-keyframe pictures, which are quick to fetch and close enough for the strip.
 export async function clipThumbnails(clip: VideoClip, count = 8): Promise<string[]> {
   const uris: string[] = [];
   for (let index = 0; index < count; index += 1) {
@@ -46,6 +49,16 @@ export async function clipThumbnails(clip: VideoClip, count = 8): Promise<string
     }
   }
   return uris;
+}
+
+// The exact frame at a moment in the clip, ready to draw. Its file is removed once read.
+export async function loadFrame(clip: VideoClip, timeMs: number): Promise<SkImage> {
+  const frame = await SchoolMedia.extractFrame(clip.uri, timeMs);
+  try {
+    return await loadSkImage(frame.uri);
+  } finally {
+    deleteTemporaryFile(frame.uri);
+  }
 }
 
 export function hasOverlayContent(edit: VideoEdit, assets: OverlayAssets): boolean {

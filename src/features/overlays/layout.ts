@@ -67,8 +67,13 @@ export function logoRect(setting: LogoSetting, canvas: Size, logoAspect: number)
 }
 
 export function shapeRect(shape: ShapeOverlay, canvas: Size): Rect {
-  const width = shape.width * canvas.width;
-  const height = shape.height * canvas.height;
+  let width = shape.width * canvas.width;
+  let height = shape.height * canvas.height;
+  // Sizes are fractions of each side, so on a non-square picture a circle uses the shorter one.
+  if (shape.shape === 'circle') {
+    width = Math.min(width, height);
+    height = width;
+  }
   return {
     x: shape.x * canvas.width - width / 2,
     y: shape.y * canvas.height - height / 2,

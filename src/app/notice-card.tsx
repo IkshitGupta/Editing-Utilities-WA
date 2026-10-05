@@ -1,7 +1,7 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Canvas, Group, ImageFormat, Picture, Skia } from '@shopify/react-native-skia';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -70,6 +70,8 @@ export default function NoticeCardScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [style, setStyle] = useState<NoticeStyle>(DEFAULT_NOTICE_STYLE);
   const [saving, setSaving] = useState(false);
+  // Blocks a second save from a quick double tap before the busy screen appears.
+  const saveInProgress = useRef(false);
 
   const cardSize = CARD_SIZES[style.size];
   const previewWidth = windowWidth - 32;
@@ -90,8 +92,23 @@ export default function NoticeCardScreen() {
 
   const hasText = title.trim().length > 0 || body.trim().length > 0;
   const ready = fonts !== null && logo !== null;
+  const bodyWarning =
+    style.size === 'square'
+      ? 'The notice is too long to fit. Shorten the text or choose Portrait 4:5.'
+      : 'The notice is too long to fit. Shorten the text.';
+  const warnings = [
+    preview.overflow.title ? 'The title is too long to fit on two lines. Shorten it.' : null,
+    preview.overflow.body ? bodyWarning : null,
+    preview.overflow.school
+      ? 'The school name, address or phone is too long to fit. Shorten it in Settings.'
+      : null,
+  ].filter((warning): warning is string => warning !== null);
 
   const save = async () => {
+    if (saveInProgress.current) {
+      return;
+    }
+    saveInProgress.current = true;
     setSaving(true);
     try {
       await waitForPaint();
@@ -111,6 +128,7 @@ export default function NoticeCardScreen() {
       Alert.alert('Could not save the notice card', errorMessage(error));
     } finally {
       setSaving(false);
+      saveInProgress.current = false;
     }
   };
 
@@ -124,14 +142,10 @@ export default function NoticeCardScreen() {
             </Group>
           </Canvas>
         </View>
-        {preview.overflow ? (
+        {warnings.length > 0 ? (
           <View className="flex-row gap-2 rounded-xl bg-brand-blush p-3">
             <Icon name="alert-circle" size={20} color={brand.magenta} />
-            <Text className="flex-1 text-sm text-foreground">
-              {style.size === 'square'
-                ? 'The notice is too long to fit. Shorten the text or choose Portrait 4:5.'
-                : 'The notice is too long to fit. Shorten the text.'}
-            </Text>
+            <Text className="flex-1 text-sm text-foreground">{warnings.join('\n')}</Text>
           </View>
         ) : null}
 

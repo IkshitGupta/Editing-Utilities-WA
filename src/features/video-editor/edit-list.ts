@@ -25,6 +25,8 @@ export type VideoClip = {
   hasAudio: boolean;
   // Bits per second for the whole file, or 0 when the file doesn't say.
   bitrate: number;
+  // The video track's format, such as video/avc or video/hevc, or '' when unknown.
+  codec: string;
   startMs: number;
   endMs: number;
 };
@@ -88,6 +90,10 @@ export const renderSpecSchema = z.object({
   musicUri: z.string().min(1).nullable(),
   musicVolume: unit,
   overlayUri: z.string().min(1).nullable(),
+  fileName: z
+    .string()
+    .regex(/^[A-Za-z0-9_-]+\.mp4$/)
+    .optional(),
 });
 
 export type RenderSpecInput = z.infer<typeof renderSpecSchema>;

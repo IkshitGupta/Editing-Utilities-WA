@@ -3,7 +3,6 @@ import { useEventListener } from 'expo';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useVideoPlayer } from 'expo-video';
-import * as VideoThumbnails from 'expo-video-thumbnails';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -24,7 +23,7 @@ import { ToolTabs, type ToolTab } from '@/components/tool-tabs';
 import { Button } from '@/components/ui/button';
 import { ChoiceChips } from '@/components/ui/choice-chips';
 import { Section } from '@/components/ui/section';
-import { exportPhoto, loadSkImage } from '@/features/image-editor/draw-photo';
+import { exportPhoto } from '@/features/image-editor/draw-photo';
 import type { ImageEdit, Rotation } from '@/features/image-editor/types';
 import { saveToAlbum } from '@/features/media/album';
 import { pickMedia } from '@/features/media/picker';
@@ -32,7 +31,12 @@ import type { MediaItem } from '@/features/media/types';
 import { useLogoImage, useOverlayFonts } from '@/features/overlays/assets';
 import { LogoPanel, TextPanel } from '@/features/overlays/panels';
 import { DEFAULT_LOGO, newTextOverlay } from '@/features/overlays/types';
-import { clipThumbnails, loadClip, renderOverlayLayer } from '@/features/video-editor/clips';
+import {
+  clipThumbnails,
+  loadClip,
+  loadFrame,
+  renderOverlayLayer,
+} from '@/features/video-editor/clips';
 import {
   buildRenderSpec,
   outputSizeFor,
@@ -43,10 +47,16 @@ import {
   type VideoEdit,
 } from '@/features/video-editor/edit-list';
 import { ClipsPanel, SoundPanel, VideoShapePanel } from '@/features/video-editor/panels';
-import { configurePlayer, seekTo, setMuted } from '@/features/video-editor/player-control';
+import {
+  configurePlayer,
+  currentTimeMs,
+  seekTo,
+  setMuted,
+} from '@/features/video-editor/player-control';
 import { TrimBar } from '@/features/video-editor/trim-bar';
 import { VideoPreview } from '@/features/video-editor/video-preview';
 import { errorCode, errorMessage } from '@/lib/errors';
+import { deleteTemporaryFile, outputName } from '@/lib/files';
 import { putTransfer, readTransfer } from '@/lib/transfer';
 import { clamp, waitForPaint } from '@/lib/utils';
 import { brand } from '@/theme/colors';
@@ -98,7 +108,7 @@ function renderErrorMessage(error: unknown): string {
     return error.issues[0]?.message ?? 'Some video settings are not valid.';
   }
   if (errorCode(error) === 'ERR_RENDER_FAILED') {
-    return `This phone could not process the video. Try a shorter clip.\n\nDetails: ${errorMessage(error)}`;
+    return `This phone could not process the video.\n\nDetails: ${errorMessage(error)}`;
   }
   return errorMessage(error);
 }
@@ -120,16 +130,31 @@ export default function VideoEditorScreen() {
   const [tool, setTool] = useState<Tool>('trim');
   const [positionMs, setPositionMs] = useState(0);
   const [playing, setPlaying] = useState(false);
+  // Follows the player as soon as it reports a change, before the screen updates, so the end of
+  // playback can be told apart from reaching the end while paused.
+  const playingNow = useRef(false);
   const [busy, setBusy] = useState<Busy | null>(null);
   const thumbnailsRequested = useRef(new Set<string>());
+  // Strips are made one clip at a time, which keeps memory low with several large videos.
+  const stripQueue = useRef<Promise<void>>(Promise.resolve());
+  // Working copies made while editing: the picker's copies of the clips, music and strip frames.
+  const workingFiles = useRef(new Set<string>());
+  const screen = useRef({ closed: false });
+  // Blocks a second save from a quick double tap before the busy screen appears.
+  const saving = useRef(false);
+  // Cancel can be tapped before the phone starts encoding, when there is nothing native to stop.
+  const cancelRequested = useRef(false);
+
+  const items = readTransfer<MediaItem[]>(transferId) ?? [];
 
   useEffect(() => {
-    const items = readTransfer<MediaItem[]>(transferId) ?? [];
-    if (items.length === 0) {
+    const picked = readTransfer<MediaItem[]>(transferId) ?? [];
+    if (picked.length === 0) {
       return;
     }
+    picked.forEach((item) => workingFiles.current.add(item.uri));
     let cancelled = false;
-    Promise.all(items.map(loadClip)).then((loaded) => {
+    Promise.all(picked.map(loadClip)).then((loaded) => {
       if (cancelled) {
         return;
       }
@@ -146,20 +171,35 @@ export default function VideoEditorScreen() {
     };
   }, [transferId]);
 
-  const clipKey = edit?.clips.map((clip) => clip.id).join('|') ?? '';
   useEffect(() => {
-    edit?.clips.forEach((clip) => {
+    const files = workingFiles.current;
+    const state = screen.current;
+    return () => {
+      state.closed = true;
+      files.forEach((uri) => deleteTemporaryFile(uri));
+    };
+  }, []);
+
+  const clips = edit?.clips;
+  useEffect(() => {
+    clips?.forEach((clip) => {
       if (thumbnailsRequested.current.has(clip.id)) {
         return;
       }
       thumbnailsRequested.current.add(clip.id);
-      clipThumbnails(clip).then((uris) =>
-        setThumbnails((previous) => ({ ...previous, [clip.id]: uris }))
-      );
+      stripQueue.current = stripQueue.current
+        .then(() => (screen.current.closed ? [] : clipThumbnails(clip)))
+        .then((uris) => {
+          if (screen.current.closed) {
+            uris.forEach((uri) => deleteTemporaryFile(uri));
+            return;
+          }
+          uris.forEach((uri) => workingFiles.current.add(uri));
+          setThumbnails((previous) => ({ ...previous, [clip.id]: uris }));
+        })
+        .catch(() => undefined);
     });
-    // Only new clips need thumbnails, so this runs when the list of clips changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clipKey]);
+  }, [clips]);
 
   const activeClip = edit?.clips.find((clip) => clip.id === activeId) ?? edit?.clips[0] ?? null;
   const player = useVideoPlayer(activeClip?.uri ?? null, configurePlayer);
@@ -168,7 +208,10 @@ export default function VideoEditorScreen() {
     setMuted(player, edit?.sound !== 'original');
   }, [player, edit?.sound]);
 
-  useEventListener(player, 'playingChange', ({ isPlaying }) => setPlaying(isPlaying));
+  useEventListener(player, 'playingChange', ({ isPlaying }) => {
+    playingNow.current = isPlaying;
+    setPlaying(isPlaying);
+  });
   useEventListener(player, 'timeUpdate', ({ currentTime }) => {
     const ms = currentTime * 1000;
     setPositionMs(ms);
@@ -178,8 +221,18 @@ export default function VideoEditorScreen() {
       seekTo(player, activeClip.startMs);
     }
   });
+  // Reaching the end of the file pauses the player, so a later tap on the frame strip only moves
+  // the preview. After playback the preview returns to the trim start, as it does at the trim end.
+  useEventListener(player, 'playToEnd', () => {
+    const afterPlayback = playingNow.current;
+    player.pause();
+    if (activeClip && afterPlayback) {
+      seekTo(player, activeClip.startMs);
+    }
+  });
 
-  if (!transferId || loadError) {
+  // A selection that no longer exists, for example after Android closed the app, has nothing to open.
+  if (!transferId || loadError || (!edit && items.length === 0)) {
     return (
       <EmptyState
         title={loadError ?? 'No video selected'}
@@ -245,6 +298,7 @@ export default function VideoEditorScreen() {
       return;
     }
     const [song] = result.assets;
+    workingFiles.current.add(song.uri);
     updateEdit({ sound: 'music', music: { uri: song.uri, name: song.name } });
   };
 
@@ -253,6 +307,7 @@ export default function VideoEditorScreen() {
     if (picked.length === 0) {
       return;
     }
+    picked.forEach((item) => workingFiles.current.add(item.uri));
     const loaded = (await Promise.all(picked.map(loadClip))).filter((clip) => clip.durationMs > 0);
     setEdit((previous) =>
       previous ? { ...previous, clips: [...previous.clips, ...loaded] } : previous
@@ -260,16 +315,28 @@ export default function VideoEditorScreen() {
   };
 
   const saveVideo = async () => {
+    if (saving.current) {
+      return;
+    }
+    saving.current = true;
+    cancelRequested.current = false;
     player.pause();
     setBusy({ title: 'Saving video…', progress: 0, cancellable: true });
     const subscription = SchoolMedia.addListener('onRenderProgress', ({ progress }) =>
       setBusy((current) => (current ? { ...current, progress } : current))
     );
+    let overlayUri: string | null = null;
     try {
       await activateKeepAwakeAsync(KEEP_AWAKE_TAG);
       await waitForPaint();
-      const overlayUri = renderOverlayLayer(edit, outputSizeFor(edit), assets);
-      const spec = renderSpecSchema.parse(buildRenderSpec(edit, overlayUri));
+      overlayUri = renderOverlayLayer(edit, outputSizeFor(edit), assets);
+      const spec = renderSpecSchema.parse({
+        ...buildRenderSpec(edit, overlayUri),
+        fileName: outputName('mp4'),
+      });
+      if (cancelRequested.current) {
+        return;
+      }
       const result = await SchoolMedia.renderVideo(spec);
       setBusy({ title: 'Adding to the album…', progress: null, cancellable: false });
       const item = await saveToAlbum({
@@ -285,25 +352,41 @@ export default function VideoEditorScreen() {
         Alert.alert('Could not save the video', renderErrorMessage(error));
       }
     } finally {
+      deleteTemporaryFile(overlayUri);
       subscription.remove();
       deactivateKeepAwake(KEEP_AWAKE_TAG);
       setBusy(null);
+      saving.current = false;
     }
   };
 
+  const cancelSave = () => {
+    cancelRequested.current = true;
+    SchoolMedia.cancelRender();
+  };
+
   const saveThumbnail = async () => {
+    if (saving.current) {
+      return;
+    }
+    saving.current = true;
     player.pause();
+    const time = Math.round(clamp(currentTimeMs(player), activeClip.startMs, activeClip.endMs));
+    // After playback the picture can be a few frames away from the position, so the preview moves
+    // to the frame being saved. The player skips a seek to the millisecond it is already at, so it
+    // first steps 1 ms away.
+    seekTo(player, time > activeClip.startMs ? time - 1 : time + 1);
+    seekTo(player, time);
     setBusy({ title: 'Saving thumbnail…', progress: null, cancellable: false });
     try {
       await waitForPaint();
-      const time = Math.round(clamp(positionMs, activeClip.startMs, activeClip.endMs));
-      const frame = await VideoThumbnails.getThumbnailAsync(activeClip.uri, { time, quality: 1 });
-      const image = await loadSkImage(frame.uri);
+      const image = await loadFrame(activeClip, time);
       try {
         // Some phones return frames still turned sideways; match the shape the video shows.
         const frameIsPortrait = image.height() > image.width();
         const videoIsPortrait = activeClip.height > activeClip.width;
         const correction = frameIsPortrait === videoIsPortrait ? 0 : 90;
+        const caption = edit.caption;
         const thumbnail: ImageEdit = {
           rotation: ((edit.rotation + correction) % 360) as Rotation,
           flipX: false,
@@ -311,7 +394,7 @@ export default function VideoEditorScreen() {
           zoom: 1,
           panX: 0,
           panY: 0,
-          overlays: edit.caption ? [edit.caption] : [],
+          overlays: caption && caption.text.trim() ? [caption] : [],
           logo: edit.logo,
           output: 'yt-thumbnail',
         };
@@ -324,6 +407,7 @@ export default function VideoEditorScreen() {
       Alert.alert('Could not save the thumbnail', errorMessage(error));
     } finally {
       setBusy(null);
+      saving.current = false;
     }
   };
 
@@ -432,7 +516,13 @@ export default function VideoEditorScreen() {
       <View
         className="border-t border-border px-4 pt-3"
         style={{ paddingBottom: insets.bottom + 12 }}>
-        <Button size="lg" icon="checkmark" label="Save video" onPress={saveVideo} />
+        <Button
+          size="lg"
+          icon="checkmark"
+          label="Save video"
+          disabled={busy !== null}
+          onPress={saveVideo}
+        />
       </View>
       <BusyModal
         visible={busy !== null}
@@ -441,7 +531,7 @@ export default function VideoEditorScreen() {
           busy?.cancellable ? 'Keep the app open. Long videos can take several minutes.' : undefined
         }
         progress={busy?.progress ?? null}
-        onCancel={busy?.cancellable ? () => SchoolMedia.cancelRender() : undefined}
+        onCancel={busy?.cancellable ? cancelSave : undefined}
       />
     </KeyboardAvoidingView>
   );
