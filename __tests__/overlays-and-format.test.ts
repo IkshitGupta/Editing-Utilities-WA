@@ -5,9 +5,16 @@ import {
   containsPoint,
   isLightColor,
   logoRect,
+  WATERMARK_OPACITY,
 } from '@/features/overlays/layout';
-import { TEXT_SIZE_MAX, newShapeOverlay, newTextOverlay } from '@/features/overlays/types';
-import { formatBytes, formatDuration, plural } from '@/lib/format';
+import {
+  DEFAULT_LOGO,
+  TEXT_SIZE_MAX,
+  newShapeOverlay,
+  newTextOverlay,
+  withLogoStyle,
+} from '@/features/overlays/types';
+import { formatDuration, plural } from '@/lib/format';
 
 describe('overlay layout', () => {
   it('moves overlays by drag steps and keeps them on the picture', () => {
@@ -38,7 +45,7 @@ describe('overlay layout', () => {
 
   it('places the logo in the chosen corner with a margin', () => {
     const rect = logoRect(
-      { enabled: true, corner: 'bottom-right', size: 'medium' },
+      { enabled: true, style: 'solid', position: 'bottom-right', size: 'medium' },
       { width: 1600, height: 1200 },
       1
     );
@@ -46,13 +53,73 @@ describe('overlay layout', () => {
     expect(rect.x + rect.width).toBeCloseTo(1600 - 42);
     expect(rect.y + rect.height).toBeCloseTo(1200 - 42);
     const topLeft = logoRect(
-      { enabled: true, corner: 'top-left', size: 'small' },
+      { enabled: true, style: 'solid', position: 'top-left', size: 'small' },
       { width: 1600, height: 1200 },
       2
     );
     expect(topLeft.x).toBeCloseTo(42);
     expect(topLeft.y).toBeCloseTo(42);
     expect(topLeft.height).toBeCloseTo(topLeft.width / 2);
+  });
+
+  it('keeps tall logos inside the picture', () => {
+    const rect = logoRect(
+      { enabled: true, style: 'watermark', position: 'center', size: 'large' },
+      { width: 1600, height: 1200 },
+      1 / 3
+    );
+    expect(rect.height).toBeCloseTo(720);
+    expect(rect.width).toBeCloseTo(240);
+    expect(rect.y).toBeGreaterThanOrEqual(0);
+  });
+
+  it('centres a watermark and makes it larger and faded', () => {
+    const canvas = { width: 1600, height: 1200 };
+    const watermark = logoRect(
+      { enabled: true, style: 'watermark', position: 'center', size: 'medium' },
+      canvas,
+      1
+    );
+    expect(watermark.width).toBeCloseTo(540);
+    expect(watermark.height).toBeCloseTo(540);
+    expect(watermark.x).toBeCloseTo(530);
+    expect(watermark.y).toBeCloseTo(330);
+    const solid = logoRect({ ...DEFAULT_LOGO, enabled: true }, canvas, 1);
+    expect(watermark.width).toBeGreaterThan(solid.width);
+    expect(WATERMARK_OPACITY).toBeGreaterThan(0);
+    expect(WATERMARK_OPACITY).toBeLessThan(0.5);
+  });
+
+  it('moves the logo to the usual place for its look', () => {
+    const corner = { ...DEFAULT_LOGO, enabled: true, size: 'large' as const };
+    const watermark = withLogoStyle(corner, 'watermark');
+    expect(watermark).toEqual({
+      enabled: true,
+      style: 'watermark',
+      position: 'center',
+      size: 'medium',
+    });
+    expect(withLogoStyle(watermark, 'solid')).toEqual({
+      enabled: true,
+      style: 'solid',
+      position: 'top-right',
+      size: 'medium',
+    });
+  });
+
+  it('starts text with a shadow rather than a band', () => {
+    expect(newTextOverlay().style).toBe('shadow');
+  });
+
+  it('makes lines long and low, pointing across', () => {
+    const line = newShapeOverlay('line');
+    expect(line).toMatchObject({ shape: 'line', direction: 'right' });
+    expect(line.width).toBeGreaterThan(line.height * 3);
+    const rect = { x: 0, y: 0, width: 100, height: 20 };
+    expect(arrowLine(rect, line.direction)).toEqual({
+      from: { x: 0, y: 10 },
+      to: { x: 100, y: 10 },
+    });
   });
 
   it('draws arrows along the way they point', () => {
@@ -85,12 +152,6 @@ describe('formatting', () => {
     expect(formatDuration(65_400)).toBe('1:05');
     expect(formatDuration(3_725_000)).toBe('1:02:05');
     expect(formatDuration(null)).toBe('0:00');
-  });
-
-  it('formats file sizes', () => {
-    expect(formatBytes(512)).toBe('1 KB');
-    expect(formatBytes(1.5 * 1024 * 1024)).toBe('1.5 MB');
-    expect(formatBytes(24 * 1024 * 1024)).toBe('24 MB');
   });
 
   it('pluralises', () => {

@@ -42,12 +42,7 @@ import {
   type VideoClip,
   type VideoEdit,
 } from '@/features/video-editor/edit-list';
-import {
-  ClipsPanel,
-  OutputPanel,
-  SoundPanel,
-  VideoShapePanel,
-} from '@/features/video-editor/panels';
+import { ClipsPanel, SoundPanel, VideoShapePanel } from '@/features/video-editor/panels';
 import { configurePlayer, seekTo, setMuted } from '@/features/video-editor/player-control';
 import { TrimBar } from '@/features/video-editor/trim-bar';
 import { VideoPreview } from '@/features/video-editor/video-preview';
@@ -56,20 +51,19 @@ import { putTransfer, readTransfer } from '@/lib/transfer';
 import { clamp, waitForPaint } from '@/lib/utils';
 import { brand } from '@/theme/colors';
 
-type Tool = 'trim' | 'shape' | 'sound' | 'text' | 'clips' | 'size';
+type Tool = 'trim' | 'shape' | 'sound' | 'text' | 'clips';
 
 const TOOLS: readonly ToolTab<Tool>[] = [
   { value: 'trim', label: 'Trim', icon: 'cut-outline' },
   { value: 'shape', label: 'Shape', icon: 'crop' },
   { value: 'sound', label: 'Sound', icon: 'musical-notes-outline' },
-  { value: 'text', label: 'Logo, text', icon: 'text' },
+  { value: 'text', label: 'Logo & text', icon: 'text' },
   { value: 'clips', label: 'Clips', icon: 'film-outline' },
-  { value: 'size', label: 'Size', icon: 'resize' },
 ];
 
 const CAPTION_PLACES = [
   { value: 'top', label: 'Top' },
-  { value: 'middle', label: 'Middle' },
+  { value: 'middle', label: 'Centre' },
   { value: 'bottom', label: 'Bottom' },
 ] as const;
 
@@ -87,7 +81,6 @@ function initialEdit(clips: VideoClip[]): VideoEdit {
     music: null,
     musicVolume: 0.6,
     mixOriginal: false,
-    preset: 'whatsapp',
     logo: DEFAULT_LOGO,
     caption: null,
   };
@@ -105,7 +98,7 @@ function renderErrorMessage(error: unknown): string {
     return error.issues[0]?.message ?? 'Some video settings are not valid.';
   }
   if (errorCode(error) === 'ERR_RENDER_FAILED') {
-    return `This phone could not make the video. Try the WhatsApp size or a shorter clip.\n\n(${errorMessage(error)})`;
+    return `This phone could not process the video. Try a shorter clip.\n\nDetails: ${errorMessage(error)}`;
   }
   return errorMessage(error);
 }
@@ -189,8 +182,8 @@ export default function VideoEditorScreen() {
   if (!transferId || loadError) {
     return (
       <EmptyState
-        title={loadError ?? 'No video to edit'}
-        message="Go back and choose a video."
+        title={loadError ?? 'No video selected'}
+        message="Go back and select a video to edit."
         showBack
       />
     );
@@ -278,7 +271,7 @@ export default function VideoEditorScreen() {
       const overlayUri = renderOverlayLayer(edit, outputSizeFor(edit), assets);
       const spec = renderSpecSchema.parse(buildRenderSpec(edit, overlayUri));
       const result = await SchoolMedia.renderVideo(spec);
-      setBusy({ title: 'Adding to the School Admin album…', progress: null, cancellable: false });
+      setBusy({ title: 'Adding to the album…', progress: null, cancellable: false });
       const item = await saveToAlbum({
         uri: result.uri,
         kind: 'video',
@@ -326,7 +319,7 @@ export default function VideoEditorScreen() {
       } finally {
         image.dispose();
       }
-      Alert.alert('Thumbnail saved', 'It is in the School Admin album, ready to add on YouTube.');
+      Alert.alert('Thumbnail saved', 'Saved to the School Admin album.');
     } catch (error) {
       Alert.alert('Could not save the thumbnail', errorMessage(error));
     } finally {
@@ -361,8 +354,15 @@ export default function VideoEditorScreen() {
               onTrim={onTrim}
               onSeek={(ms) => seekTo(player, ms)}
             />
+            <Text className="text-sm text-muted">Drag the handles to set the start and end.</Text>
+            <Button
+              variant="secondary"
+              icon="image-outline"
+              label="Save frame as thumbnail"
+              onPress={saveThumbnail}
+            />
             <Text className="text-sm text-muted">
-              Drag the yellow handles to choose the part to keep.
+              Saves the current frame as a 1280 × 720 YouTube thumbnail, with the logo and caption.
             </Text>
           </View>
         );
@@ -381,7 +381,7 @@ export default function VideoEditorScreen() {
                 onAdd={() => updateEdit({ caption: newTextOverlay({ y: CAPTION_Y.bottom }) })}
                 onChange={(patch) => caption && updateEdit({ caption: { ...caption, ...patch } })}
                 onDelete={() => updateEdit({ caption: null })}
-                hint="Add a line of text, such as the event name and date."
+                hint="For example, the event name and date."
               />
               {caption ? (
                 <ChoiceChips
@@ -404,8 +404,6 @@ export default function VideoEditorScreen() {
             onAddClips={addClips}
           />
         );
-      case 'size':
-        return <OutputPanel edit={edit} onChange={updateEdit} onSaveThumbnail={saveThumbnail} />;
     }
   })();
 
@@ -440,7 +438,7 @@ export default function VideoEditorScreen() {
         visible={busy !== null}
         title={busy?.title ?? ''}
         message={
-          busy?.cancellable ? 'Keep the app open. Longer videos take a few minutes.' : undefined
+          busy?.cancellable ? 'Keep the app open. Long videos can take several minutes.' : undefined
         }
         progress={busy?.progress ?? null}
         onCancel={busy?.cancellable ? () => SchoolMedia.cancelRender() : undefined}

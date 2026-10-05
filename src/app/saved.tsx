@@ -27,7 +27,7 @@ export default function SavedScreen() {
   };
 
   if (items.length === 0) {
-    return <EmptyState title="Nothing was saved" showBack />;
+    return <EmptyState title="No items saved" showBack />;
   }
 
   const thumbSize = Math.floor((width - 32) / 3);
@@ -46,7 +46,7 @@ export default function SavedScreen() {
             <Text className="text-xl font-bold text-foreground">
               Saved {plural(items.length, kind)}
             </Text>
-            <Text className="text-sm text-muted">In the School Admin album on this phone.</Text>
+            <Text className="text-sm text-muted">In the School Admin album.</Text>
           </View>
         </View>
         <View className="flex-row flex-wrap">
@@ -59,9 +59,7 @@ export default function SavedScreen() {
             />
           ))}
         </View>
-        <Text className="text-base text-foreground">
-          Share now? Pick the class groups or Page in the next app.
-        </Text>
+        <Text className="text-base text-foreground">Share now, or later from the Media tab.</Text>
         <ShareButtons items={items} />
       </ScrollView>
       <View

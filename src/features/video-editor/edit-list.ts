@@ -6,13 +6,12 @@ import type { LogoSetting, TextOverlay } from '@/features/overlays/types';
 import { clamp } from '@/lib/utils';
 
 import {
-  VIDEO_PRESETS,
+  MAX_VIDEO_BITRATE,
   VIDEO_SHAPES,
   cropForAspect,
   isFullFrame,
   outputVideoSize,
   videoBitrate,
-  type VideoPresetId,
   type VideoShapeId,
 } from './presets';
 
@@ -24,6 +23,8 @@ export type VideoClip = {
   height: number;
   durationMs: number;
   hasAudio: boolean;
+  // Bits per second for the whole file, or 0 when the file doesn't say.
+  bitrate: number;
   startMs: number;
   endMs: number;
 };
@@ -41,7 +42,6 @@ export type VideoEdit = {
   musicVolume: number;
   // Whether the video's own sound plays under the music.
   mixOriginal: boolean;
-  preset: VideoPresetId;
   logo: LogoSetting;
   caption: TextOverlay | null;
 };
@@ -72,7 +72,7 @@ const evenSide = z
   .int()
   .min(2)
   .max(3840)
-  .refine((value) => value % 2 === 0, 'Video sizes must be even.');
+  .refine((value) => value % 2 === 0, 'This video size is not supported.');
 
 export const renderSpecSchema = z.object({
   clips: z
@@ -82,7 +82,7 @@ export const renderSpecSchema = z.object({
   rotationDegrees: z.union([z.literal(0), z.literal(90), z.literal(180), z.literal(270)]),
   width: evenSide,
   height: evenSide,
-  videoBitrate: z.number().int().min(100_000).max(50_000_000),
+  videoBitrate: z.number().int().min(100_000).max(MAX_VIDEO_BITRATE),
   keepOriginalAudio: z.boolean(),
   originalVolume: unit,
   musicUri: z.string().min(1).nullable(),
@@ -122,20 +122,22 @@ export function clipCrop(clip: VideoClip, edit: VideoEdit) {
   return cropForAspect(orientedSize(clip, edit.rotation), outputAspect(edit), edit.position);
 }
 
+// The sharpest clip sets the size, so joining a clip never lowers another clip's resolution.
 export function outputSizeFor(edit: VideoEdit) {
-  const first = edit.clips[0];
-  const rotated = orientedSize(first, edit.rotation);
-  const crop = clipCrop(first, edit);
-  const croppedShortSide = Math.min(
-    (crop.right - crop.left) * rotated.width,
-    (crop.bottom - crop.top) * rotated.height
-  );
-  return outputVideoSize(outputAspect(edit), VIDEO_PRESETS[edit.preset], croppedShortSide);
+  const shortSides = edit.clips.map((clip) => {
+    const rotated = orientedSize(clip, edit.rotation);
+    const crop = clipCrop(clip, edit);
+    return Math.min(
+      (crop.right - crop.left) * rotated.width,
+      (crop.bottom - crop.top) * rotated.height
+    );
+  });
+  return outputVideoSize(outputAspect(edit), Math.max(...shortSides));
 }
 
 export function buildRenderSpec(edit: VideoEdit, overlayUri: string | null): RenderSpecInput {
   const size = outputSizeFor(edit);
-  const { bitrate } = videoBitrate(VIDEO_PRESETS[edit.preset], trimmedDurationMs(edit.clips));
+  const bitrate = videoBitrate(size, edit.clips);
   const musicUri = edit.sound === 'music' && edit.music ? edit.music.uri : null;
   const keepOriginalAudio =
     edit.sound === 'original' || (edit.sound === 'music' && (edit.mixOriginal || !musicUri));

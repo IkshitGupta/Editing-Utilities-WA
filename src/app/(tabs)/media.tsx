@@ -76,9 +76,9 @@ export default function MediaScreen() {
   const remove = () => {
     Alert.alert(
       `Delete ${plural(chosen.length, 'item')}?`,
-      'They will be removed from the School Admin album on this phone. Anything already shared stays shared.',
+      `${chosen.length === 1 ? 'It' : 'They'} will be removed from this phone. Anything already shared is not affected.`,
       [
-        { text: 'Keep', style: 'cancel' },
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
           style: 'destructive',
@@ -100,17 +100,13 @@ export default function MediaScreen() {
     return (
       <View className="flex-1 items-center justify-center gap-4 bg-background px-8">
         <Text className="text-center text-lg font-semibold text-foreground">
-          Allow access to photos and videos
+          Photo and video access needed
         </Text>
         <Text className="text-center text-base text-muted">
-          The app needs this to show the School Admin album. Your photos stay on this phone.
+          Allow access so the app can show the School Admin album.
         </Text>
         <Button label="Try again" onPress={load} />
-        <Button
-          variant="ghost"
-          label="Open phone settings"
-          onPress={() => Linking.openSettings()}
-        />
+        <Button variant="ghost" label="Open settings" onPress={() => Linking.openSettings()} />
       </View>
     );
   }
@@ -118,8 +114,8 @@ export default function MediaScreen() {
   if (status === 'ready' && items.length === 0) {
     return (
       <EmptyState
-        title="Nothing here yet"
-        message="Edited photos, videos and notice cards are saved here so you can share them again."
+        title="No saved items"
+        message="Photos, videos and notice cards you save appear here."
       />
     );
   }

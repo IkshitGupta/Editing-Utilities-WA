@@ -42,7 +42,7 @@ export const THEMES: Record<ThemeId, Theme> = {
     tint: brand.blush,
   },
   sunshine: {
-    label: 'Sunshine',
+    label: 'Yellow',
     primary: '#F5C400',
     onPrimary: brand.navy,
     heading: brand.navy,
@@ -58,12 +58,9 @@ export const DESIGNS: readonly { value: DesignId; label: string }[] = [
   { value: 'minimal', label: 'Simple' },
 ];
 
-export const CARD_SIZES: Record<
-  CardSizeId,
-  { label: string; hint: string; width: number; height: number }
-> = {
-  square: { label: 'Square', hint: 'WhatsApp and Facebook', width: 1080, height: 1080 },
-  portrait: { label: 'Tall', hint: 'More room for text', width: 1080, height: 1350 },
+export const CARD_SIZES: Record<CardSizeId, { label: string; width: number; height: number }> = {
+  square: { label: 'Square', width: 1080, height: 1080 },
+  portrait: { label: 'Portrait 4:5', width: 1080, height: 1350 },
 };
 
 export const DEFAULT_NOTICE_STYLE: NoticeStyle = {

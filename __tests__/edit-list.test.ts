@@ -17,6 +17,7 @@ const clip = (patch: Partial<VideoClip> = {}): VideoClip => ({
   height: 1080,
   durationMs: 60_000,
   hasAudio: true,
+  bitrate: 16_000_000,
   startMs: 0,
   endMs: 60_000,
   ...patch,
@@ -31,19 +32,19 @@ const edit = (patch: Partial<VideoEdit> = {}): VideoEdit => ({
   music: null,
   musicVolume: 0.6,
   mixOriginal: false,
-  preset: 'whatsapp',
   logo: DEFAULT_LOGO,
   caption: null,
   ...patch,
 });
 
 describe('render spec', () => {
-  it('builds a valid spec for a single clip', () => {
+  it('builds a valid spec that keeps the video’s size and bitrate', () => {
     const spec = renderSpecSchema.parse(buildRenderSpec(edit(), null));
     expect(spec).toMatchObject({
       rotationDegrees: 0,
-      width: 1280,
-      height: 720,
+      width: 1920,
+      height: 1080,
+      videoBitrate: 16_000_000,
       keepOriginalAudio: true,
       originalVolume: 1,
       musicUri: null,
@@ -62,9 +63,17 @@ describe('render spec', () => {
     expect(outputAspect(edit({ clips: [clip(), portrait] }))).toBeCloseTo(16 / 9);
   });
 
+  it('sizes joined clips by the sharpest one', () => {
+    const small = clip({ id: 'b', width: 1280, height: 720, bitrate: 4_000_000 });
+    expect(buildRenderSpec(edit({ clips: [small, clip()] }), null)).toMatchObject({
+      width: 1920,
+      height: 1080,
+    });
+  });
+
   it('turns the output when the video is rotated', () => {
     const spec = buildRenderSpec(edit({ rotation: 90 }), null);
-    expect(spec).toMatchObject({ rotationDegrees: 90, width: 720, height: 1280 });
+    expect(spec).toMatchObject({ rotationDegrees: 90, width: 1080, height: 1920 });
   });
 
   it('mutes the video', () => {
@@ -96,8 +105,8 @@ describe('render spec', () => {
     });
   });
 
-  it('makes Shorts tall without enlarging the cropped picture', () => {
-    expect(buildRenderSpec(edit({ shape: 'tall', preset: 'shorts' }), null)).toMatchObject({
+  it('makes a tall video without enlarging the cropped picture', () => {
+    expect(buildRenderSpec(edit({ shape: 'tall' }), null)).toMatchObject({
       width: 608,
       height: 1080,
     });

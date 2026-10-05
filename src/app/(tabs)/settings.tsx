@@ -40,7 +40,7 @@ function InstallNote({ app, installed }: { app: AppInfo; installed: boolean | un
       <Text className="flex-1 text-sm text-muted">
         {installed
           ? `${app.label} is installed.`
-          : `${app.label} is not on this phone. Install it from the Play Store, or the phone will ask which app to use.`}
+          : `${app.label} is not installed. When sharing, the phone will ask which app to use.`}
       </Text>
     </View>
   );
@@ -69,17 +69,17 @@ export default function SettingsScreen() {
 
   const saveDetails = () => {
     if (!name.trim()) {
-      Alert.alert('School name needed', 'Type the school name before saving.');
+      Alert.alert('School name required', 'Enter the school name before saving.');
       return;
     }
     const next = updateSettings({ schoolName: name, address, phone });
     setName(next.schoolName);
     setAddress(next.address);
     setPhone(next.phone);
-    Alert.alert('Saved', 'New notice cards will use these details.');
+    Alert.alert('Details saved', 'New notice cards will use these details.');
   };
 
-  const restoreDetails = () => {
+  const resetDetails = () => {
     const next = updateSettings({
       schoolName: SCHOOL.name,
       address: SCHOOL.address,
@@ -97,24 +97,27 @@ export default function SettingsScreen() {
         updateSettings({ logoUri: uri });
       }
     } catch (error) {
-      Alert.alert('Could not use that picture', errorMessage(error));
+      Alert.alert('Could not use this image', errorMessage(error));
     }
   };
 
   const checkForUpdates = async () => {
     if (!Updates.isEnabled) {
-      Alert.alert('Updates', 'This copy of the app does not receive updates over the internet.');
+      Alert.alert(
+        'Updates unavailable',
+        'Automatic updates are not available in this version of the app.'
+      );
       return;
     }
     setChecking(true);
     try {
       const result = await Updates.checkForUpdateAsync();
       if (!result.isAvailable) {
-        Alert.alert('Up to date', 'You already have the latest version.');
+        Alert.alert('Up to date', 'You have the latest version.');
         return;
       }
       await Updates.fetchUpdateAsync();
-      Alert.alert('Update ready', 'Restart the app now to use the new version?', [
+      Alert.alert('Update ready', 'Restart the app to use the new version?', [
         { text: 'Later', style: 'cancel' },
         { text: 'Restart', onPress: () => Updates.reloadAsync() },
       ]);
@@ -144,7 +147,7 @@ export default function SettingsScreen() {
             <Input
               value={phone}
               onChangeText={setPhone}
-              placeholder="Phone"
+              placeholder="Phone number"
               keyboardType="phone-pad"
               maxLength={30}
             />
@@ -157,14 +160,12 @@ export default function SettingsScreen() {
               disabled={!changed}
               onPress={saveDetails}
             />
-            <Button variant="ghost" label="Restore" onPress={restoreDetails} />
+            <Button variant="ghost" label="Reset" onPress={resetDetails} />
           </View>
         </Card>
 
         <Card className="gap-4">
-          <Section
-            title="Logo"
-            hint="Used on notice cards and as the watermark on photos and videos.">
+          <Section title="Logo" hint="Used on notice cards, photos and videos.">
             <View className="flex-row items-center gap-4">
               <Image
                 source={logoSource(settings.logoUri)}
@@ -176,14 +177,14 @@ export default function SettingsScreen() {
                   size="sm"
                   variant="secondary"
                   icon="image-outline"
-                  label="Choose another logo"
+                  label="Change logo"
                   onPress={pickLogo}
                 />
                 {settings.logoUri ? (
                   <Button
                     size="sm"
                     variant="ghost"
-                    label="Use the school logo"
+                    label="Use default logo"
                     onPress={() => updateSettings({ logoUri: null })}
                   />
                 ) : null}
@@ -193,7 +194,7 @@ export default function SettingsScreen() {
         </Card>
 
         <Card className="gap-4">
-          <Section title="WhatsApp app">
+          <Section title="Sharing apps" hint="Choose which WhatsApp app opens when you share.">
             <ChoiceChips
               options={WHATSAPP_OPTIONS}
               value={settings.whatsappApp}
@@ -208,7 +209,7 @@ export default function SettingsScreen() {
         <Card className="gap-3">
           <Section title="About">
             <Text className="text-base text-foreground">
-              Walnut Academy app, version {Constants.expoConfig?.version ?? '1.0.0'}
+              Version {Constants.expoConfig?.version ?? '1.0.0'}
             </Text>
             <Button
               variant="secondary"

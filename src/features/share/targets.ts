@@ -42,15 +42,15 @@ export type ShareCheck = { ok: true } | { ok: false; message: string };
 
 export function checkShare(destination: ShareDestination, kinds: MediaKind[]): ShareCheck {
   if (kinds.length === 0) {
-    return { ok: false, message: 'Choose at least one photo or video first.' };
+    return { ok: false, message: 'Select at least one photo or video.' };
   }
   if (destination === 'youtube' && (kinds.length !== 1 || kinds[0] !== 'video')) {
-    return { ok: false, message: 'YouTube takes one video at a time. Choose a single video.' };
+    return { ok: false, message: 'YouTube accepts one video at a time. Select a single video.' };
   }
   if (destination === 'whatsapp' && kinds.length > WHATSAPP_MAX_ITEMS) {
     return {
       ok: false,
-      message: `WhatsApp can send up to ${WHATSAPP_MAX_ITEMS} photos and videos at once. Choose fewer and share the rest next.`,
+      message: `WhatsApp accepts up to ${WHATSAPP_MAX_ITEMS} photos and videos at a time. Select fewer items.`,
     };
   }
   return { ok: true };

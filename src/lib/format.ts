@@ -13,17 +13,6 @@ export function formatDuration(ms: number | null | undefined): string {
   return `${minutes}:${ss}`;
 }
 
-export function formatBytes(bytes: number): string {
-  if (!Number.isFinite(bytes) || bytes <= 0) {
-    return '0 KB';
-  }
-  const mb = bytes / (1024 * 1024);
-  if (mb >= 1) {
-    return `${mb.toFixed(mb >= 10 ? 0 : 1)} MB`;
-  }
-  return `${Math.max(1, Math.round(bytes / 1024))} KB`;
-}
-
 export function plural(count: number, one: string, many: string = `${one}s`): string {
   return `${count} ${count === 1 ? one : many}`;
 }

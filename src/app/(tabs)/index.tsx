@@ -5,14 +5,12 @@ import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BusyModal } from '@/components/busy-modal';
-import { Button } from '@/components/ui/button';
 import { Icon, type IconName } from '@/components/ui/icon';
 import { pickMedia, takePhoto } from '@/features/media/picker';
 import type { MediaItem } from '@/features/media/types';
 import { logoSource } from '@/features/overlays/assets';
 import { useSettings } from '@/features/settings/store';
 import { shareTo } from '@/features/share/share';
-import { WHATSAPP_MAX_ITEMS } from '@/features/share/targets';
 import { errorMessage } from '@/lib/errors';
 import { putTransfer } from '@/lib/transfer';
 import { brand, ui } from '@/theme/colors';
@@ -84,7 +82,7 @@ export default function HomeScreen() {
         />
         <View className="flex-1">
           <Text className="text-2xl font-bold text-brand-navy">{settings.schoolName}</Text>
-          <Text className="text-base text-muted">What would you like to do?</Text>
+          <Text className="text-base text-muted">Photos, videos and notices</Text>
         </View>
       </View>
 
@@ -105,7 +103,7 @@ export default function HomeScreen() {
           icon="videocam-outline"
           color={brand.magenta}
           title="Edit a video"
-          subtitle="Trim, music, join clips"
+          subtitle="Trim, join clips, add music"
           onPress={() =>
             pickThen(
               () => pickMedia({ kinds: ['video'], multiple: true, limit: 10 }),
@@ -120,20 +118,19 @@ export default function HomeScreen() {
           icon="document-text-outline"
           color={brand.navy}
           title="Notice card"
-          subtitle="Type a notice, get a picture"
+          subtitle="On the school letterhead"
           onPress={() => router.push('/notice-card')}
         />
         <Tile
-          icon="logo-whatsapp"
-          color={ui.whatsapp}
-          title="Share to WhatsApp"
-          subtitle="Send to class groups"
+          icon="camera-outline"
+          color={brand.gold}
+          title="Take a photo"
+          subtitle="Capture, then edit"
           onPress={() =>
-            pickThen(
-              () =>
-                pickMedia({ kinds: ['image', 'video'], multiple: true, limit: WHATSAPP_MAX_ITEMS }),
-              (items) => shareTo('whatsapp', items)
-            )
+            pickThen(async () => {
+              const photo = await takePhoto();
+              return photo ? [photo] : [];
+            }, openEditor('/image-editor'))
           }
         />
       </View>
@@ -155,7 +152,7 @@ export default function HomeScreen() {
           icon="logo-youtube"
           color={ui.youtube}
           title="Upload to YouTube"
-          subtitle="One video at a time"
+          subtitle="The school channel"
           onPress={() =>
             pickThen(
               () => pickMedia({ kinds: ['video'], multiple: false }),
@@ -165,26 +162,14 @@ export default function HomeScreen() {
         />
       </View>
 
-      <Button
-        variant="secondary"
-        icon="camera-outline"
-        label="Take a photo and edit it"
-        onPress={() =>
-          pickThen(async () => {
-            const photo = await takePhoto();
-            return photo ? [photo] : [];
-          }, openEditor('/image-editor'))
-        }
-      />
-
       <View className="flex-row gap-3 rounded-2xl bg-brand-blue/10 p-4">
         <Icon name="information-circle-outline" size={22} color={brand.blue} />
         <Text className="flex-1 text-sm text-foreground">
-          Everything you edit is saved in the School Admin album. Open the Media tab to share it
-          again.
+          Edited photos, videos and notice cards are saved to the School Admin album. Share them
+          again from the Media tab.
         </Text>
       </View>
-      <BusyModal visible={busy} title="Getting your photos and videos ready…" />
+      <BusyModal visible={busy} title="Preparing your selection…" />
     </ScrollView>
   );
 }

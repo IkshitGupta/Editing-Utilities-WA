@@ -74,7 +74,7 @@ function freshEdit(previous?: ImageEdit): ImageEdit {
     shape: previous?.shape ?? 'original',
     overlays: [],
     logo: previous?.logo ?? DEFAULT_LOGO,
-    output: previous?.output ?? 'whatsapp',
+    output: previous?.output ?? 'original',
   };
 }
 
@@ -130,7 +130,11 @@ export default function ImageEditorScreen() {
 
   if (items.length === 0) {
     return (
-      <EmptyState title="No photos to edit" message="Go back and choose some photos." showBack />
+      <EmptyState
+        title="No photos selected"
+        message="Go back and select photos to edit."
+        showBack
+      />
     );
   }
 
@@ -246,7 +250,7 @@ export default function ImageEditorScreen() {
       }
       finish();
     } catch (error) {
-      Alert.alert('Could not save every photo', errorMessage(error));
+      Alert.alert('Could not save all photos', errorMessage(error));
     } finally {
       setBusy(null);
     }
@@ -268,7 +272,8 @@ export default function ImageEditorScreen() {
             onAdd={() => addOverlay(newTextOverlay())}
             onChange={(patch) => selectedId && updateOverlay(selectedId, patch)}
             onDelete={removeSelected}
-            hint="Tap a text on the photo to change it. Drag it to move it and pinch to resize it."
+            hint="Tap text on the photo to edit it. Drag to move it and pinch to resize it."
+            note="The dashed outline marks the selected text and is not saved."
           />
         );
       case 'shapes':
@@ -351,12 +356,12 @@ export default function ImageEditorScreen() {
               size="sm"
               variant="ghost"
               icon="albums-outline"
-              label={`Save all ${remaining} photos this way`}
+              label={`Save all ${remaining} photos`}
               disabled={!image}
               onPress={saveAllRemaining}
             />
             <Text className="text-xs text-muted">
-              The rest get this photo&apos;s shape, logo and size.
+              Applies this photo&apos;s shape, logo and size to the rest.
             </Text>
           </View>
         ) : null}

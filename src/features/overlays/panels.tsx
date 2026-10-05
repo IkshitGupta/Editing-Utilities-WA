@@ -13,10 +13,12 @@ import {
   SHAPE_SIZE_MIN,
   TEXT_SIZE_MAX,
   TEXT_SIZE_MIN,
+  withLogoStyle,
   type ArrowDirection,
-  type LogoCorner,
+  type LogoPosition,
   type LogoSetting,
   type LogoSize,
+  type LogoStyle,
   type ShapeKind,
   type ShapeOverlay,
   type TextOverlay,
@@ -26,8 +28,8 @@ import {
 const GROW = 1.15;
 
 const TEXT_STYLES = [
-  { value: 'band', label: 'On a band' },
-  { value: 'shadow', label: 'With shadow' },
+  { value: 'shadow', label: 'Shadow' },
+  { value: 'band', label: 'Background' },
   { value: 'plain', label: 'Plain' },
 ] as const satisfies readonly { value: TextStyleId; label: string }[];
 
@@ -37,6 +39,8 @@ type TextPanelProps = {
   onChange: (patch: Partial<TextOverlay>) => void;
   onDelete: () => void;
   hint: string;
+  // Shown under the controls while a text is selected.
+  note?: string;
   allowMultiple?: boolean;
 };
 
@@ -46,6 +50,7 @@ export function TextPanel({
   onChange,
   onDelete,
   hint,
+  note,
   allowMultiple = true,
 }: TextPanelProps) {
   if (!overlay) {
@@ -62,7 +67,7 @@ export function TextPanel({
         multiline
         value={overlay.text}
         onChangeText={(text) => onChange({ text })}
-        placeholder="Type your text"
+        placeholder="Enter text"
         maxLength={160}
       />
       <Section title="Colour">
@@ -93,7 +98,7 @@ export function TextPanel({
           size="sm"
           variant="secondary"
           icon="add"
-          label="Bigger"
+          label="Larger"
           onPress={() =>
             onChange({ size: clamp(overlay.size * GROW, TEXT_SIZE_MIN, TEXT_SIZE_MAX) })
           }
@@ -123,15 +128,17 @@ export function TextPanel({
           onPress={onDelete}
         />
       </View>
+      {note ? <Text className="text-sm text-muted">{note}</Text> : null}
     </View>
   );
 }
 
 const SHAPES = [
-  { value: 'rectangle', label: 'Box', icon: 'square-outline' },
+  { value: 'rectangle', label: 'Rectangle', icon: 'square-outline' },
   { value: 'circle', label: 'Circle', icon: 'ellipse-outline' },
   { value: 'arrow', label: 'Arrow', icon: 'arrow-forward' },
-] as const;
+  { value: 'line', label: 'Line', icon: 'remove-outline' },
+] as const satisfies readonly { value: ShapeKind; label: string; icon: string }[];
 
 const THICKNESS = [
   { value: 'thin', label: 'Thin' },
@@ -155,6 +162,11 @@ const DIRECTIONS = [
   { value: 'down', label: 'Down', icon: 'arrow-down' },
 ] as const satisfies readonly { value: ArrowDirection; label: string; icon: string }[];
 
+const LINE_DIRECTIONS = [
+  { value: 'right', label: 'Horizontal' },
+  { value: 'down', label: 'Vertical' },
+] as const satisfies readonly { value: ArrowDirection; label: string }[];
+
 type ShapePanelProps = {
   shape: ShapeOverlay | null;
   onAdd: (kind: ShapeKind) => void;
@@ -166,25 +178,32 @@ export function ShapePanel({ shape, onAdd, onChange, onDelete }: ShapePanelProps
   if (!shape) {
     return (
       <View className="gap-3">
-        <View className="flex-row gap-2">
-          {SHAPES.map((option) => (
-            <Button
-              key={option.value}
-              className="flex-1"
-              variant="secondary"
-              icon={option.icon}
-              label={option.label}
-              onPress={() => onAdd(option.value)}
-            />
-          ))}
-        </View>
+        {[SHAPES.slice(0, 2), SHAPES.slice(2)].map((row) => (
+          <View key={row[0].value} className="flex-row gap-2">
+            {row.map((option) => (
+              <Button
+                key={option.value}
+                className="flex-1"
+                variant="secondary"
+                icon={option.icon}
+                label={option.label}
+                onPress={() => onAdd(option.value)}
+              />
+            ))}
+          </View>
+        ))}
         <Text className="text-sm text-muted">
-          Add a box, circle or arrow to point something out. Drag it into place and pinch to resize.
+          Use shapes to highlight part of the photo. Drag to move a shape and pinch to resize it.
         </Text>
       </View>
     );
   }
   const isHorizontal = (direction: ArrowDirection) => direction === 'left' || direction === 'right';
+  // Keeps arrows and lines long along the way they point.
+  const turnTo = (direction: ArrowDirection) => {
+    const turned = isHorizontal(direction) !== isHorizontal(shape.direction);
+    onChange(turned ? { direction, width: shape.height, height: shape.width } : { direction });
+  };
   const resize = (factor: number) =>
     onChange({
       width: clamp(shape.width * factor, SHAPE_SIZE_MIN, 1),
@@ -199,7 +218,7 @@ export function ShapePanel({ shape, onAdd, onChange, onDelete }: ShapePanelProps
           onChange={(color) => onChange({ color })}
         />
       </Section>
-      <Section title="Line">
+      <Section title="Thickness">
         <ChoiceChips
           options={THICKNESS}
           value={thicknessName(shape.thickness)}
@@ -207,17 +226,16 @@ export function ShapePanel({ shape, onAdd, onChange, onDelete }: ShapePanelProps
         />
       </Section>
       {shape.shape === 'arrow' ? (
-        <Section title="Points">
+        <Section title="Direction">
+          <ChoiceChips options={DIRECTIONS} value={shape.direction} onChange={turnTo} />
+        </Section>
+      ) : null}
+      {shape.shape === 'line' ? (
+        <Section title="Direction">
           <ChoiceChips
-            options={DIRECTIONS}
-            value={shape.direction}
-            onChange={(direction) => {
-              // Keep the arrow long along the way it points.
-              const turned = isHorizontal(direction) !== isHorizontal(shape.direction);
-              onChange(
-                turned ? { direction, width: shape.height, height: shape.width } : { direction }
-              );
-            }}
+            options={LINE_DIRECTIONS}
+            value={isHorizontal(shape.direction) ? 'right' : 'down'}
+            onChange={turnTo}
           />
         </Section>
       ) : null}
@@ -233,7 +251,7 @@ export function ShapePanel({ shape, onAdd, onChange, onDelete }: ShapePanelProps
           size="sm"
           variant="secondary"
           icon="add"
-          label="Bigger"
+          label="Larger"
           onPress={() => resize(GROW)}
         />
       </View>
@@ -257,12 +275,20 @@ export function ShapePanel({ shape, onAdd, onChange, onDelete }: ShapePanelProps
   );
 }
 
+const LOGO_STYLES = [
+  { value: 'solid', label: 'Solid' },
+  { value: 'watermark', label: 'Watermark' },
+] as const satisfies readonly { value: LogoStyle; label: string }[];
+
 const CORNERS = [
   { value: 'top-right', label: 'Top right' },
   { value: 'top-left', label: 'Top left' },
   { value: 'bottom-right', label: 'Bottom right' },
   { value: 'bottom-left', label: 'Bottom left' },
-] as const satisfies readonly { value: LogoCorner; label: string }[];
+] as const satisfies readonly { value: LogoPosition; label: string }[];
+
+// A solid logo in the middle would hide the picture, so only a watermark can go there.
+const WATERMARK_POSITIONS = [{ value: 'center', label: 'Centre' }, ...CORNERS] as const;
 
 const LOGO_SIZES = [
   { value: 'small', label: 'Small' },
@@ -276,6 +302,7 @@ type LogoPanelProps = {
 };
 
 export function LogoPanel({ logo, onChange }: LogoPanelProps) {
+  const watermark = logo.style === 'watermark';
   return (
     <View className="gap-4">
       <View className="flex-row items-center justify-between rounded-xl border border-border px-4 py-3">
@@ -289,11 +316,20 @@ export function LogoPanel({ logo, onChange }: LogoPanelProps) {
       </View>
       {logo.enabled ? (
         <>
-          <Section title="Corner">
+          <Section
+            title="Style"
+            hint={watermark ? 'Semi-transparent, so the picture shows through.' : undefined}>
             <ChoiceChips
-              options={CORNERS}
-              value={logo.corner}
-              onChange={(corner) => onChange({ ...logo, corner })}
+              options={LOGO_STYLES}
+              value={logo.style}
+              onChange={(style) => onChange(withLogoStyle(logo, style))}
+            />
+          </Section>
+          <Section title="Position">
+            <ChoiceChips
+              options={watermark ? WATERMARK_POSITIONS : CORNERS}
+              value={logo.position}
+              onChange={(position) => onChange({ ...logo, position })}
             />
           </Section>
           <Section title="Size">

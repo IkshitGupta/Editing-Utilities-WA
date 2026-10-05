@@ -21,37 +21,37 @@ type PanelProps = {
 export function CropPanel({ edit, onChange }: PanelProps) {
   const fixedBy = OUTPUT_PRESETS[edit.output].shape ? OUTPUT_PRESETS[edit.output] : null;
   const chooseShape = (shape: CropShapeId) => {
-    // A fixed-size output only fits its own shape, so another shape switches to WhatsApp size.
-    const output = fixedBy && fixedBy.shape !== shape ? 'whatsapp' : edit.output;
+    // A fixed size fits only its own shape, so another shape goes back to the original size.
+    const output = fixedBy && fixedBy.shape !== shape ? 'original' : edit.output;
     onChange({ shape, output, zoom: 1, panX: 0, panY: 0 });
   };
   return (
     <View className="gap-4">
-      <Section title="Shape" hint="Drag the photo to move it inside the frame. Pinch to zoom.">
+      <Section title="Shape" hint="Drag to reposition the photo. Pinch to zoom.">
         <ChoiceChips options={SHAPE_OPTIONS} value={edit.shape} onChange={chooseShape} />
       </Section>
       <View className="flex-row flex-wrap gap-2">
         <Button
           size="sm"
           variant="secondary"
-          icon="arrow-redo-outline"
-          label="Turn right"
-          onPress={() => onChange({ rotation: rotateClockwise(edit.rotation), panX: 0, panY: 0 })}
-        />
-        <Button
-          size="sm"
-          variant="secondary"
           icon="arrow-undo-outline"
-          label="Turn left"
+          label="Rotate left"
           onPress={() =>
             onChange({ rotation: rotateCounterClockwise(edit.rotation), panX: 0, panY: 0 })
           }
         />
         <Button
           size="sm"
+          variant="secondary"
+          icon="arrow-redo-outline"
+          label="Rotate right"
+          onPress={() => onChange({ rotation: rotateClockwise(edit.rotation), panX: 0, panY: 0 })}
+        />
+        <Button
+          size="sm"
           variant={edit.flipX ? 'primary' : 'secondary'}
           icon="swap-horizontal"
-          label="Mirror"
+          label="Flip"
           onPress={() => onChange({ flipX: !edit.flipX })}
         />
         <Button
@@ -106,7 +106,7 @@ export function SizePanel({ edit, onChange, resultSize }: SizePanelProps) {
       })}
       {resultSize ? (
         <Text className="pt-1 text-sm text-muted">
-          Will save as {resultSize.width} × {resultSize.height} pixels.
+          Saves at {resultSize.width} × {resultSize.height} pixels.
         </Text>
       ) : null}
     </View>

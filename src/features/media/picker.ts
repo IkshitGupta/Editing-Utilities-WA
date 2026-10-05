@@ -40,8 +40,8 @@ export async function takePhoto(): Promise<MediaItem | null> {
   const permission = await ImagePicker.requestCameraPermissionsAsync();
   if (!permission.granted) {
     Alert.alert(
-      'Camera not allowed',
-      'Allow camera access for Walnut Academy in your phone settings to take photos from the app.'
+      'Camera access needed',
+      'Allow camera access for Walnut Academy in the phone settings.'
     );
     return null;
   }

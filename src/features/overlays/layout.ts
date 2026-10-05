@@ -7,6 +7,7 @@ import {
   type ArrowDirection,
   type LogoSetting,
   type LogoSize,
+  type LogoStyle,
   type Overlay,
   type ShapeOverlay,
 } from './types';
@@ -37,17 +38,29 @@ export function applyOverlayChange(overlay: Overlay, change: OverlayChange): Ove
   };
 }
 
-const LOGO_WIDTH: Record<LogoSize, number> = { small: 0.14, medium: 0.2, large: 0.28 };
+const LOGO_SIZE: Record<LogoStyle, Record<LogoSize, number>> = {
+  solid: { small: 0.14, medium: 0.2, large: 0.28 },
+  watermark: { small: 0.3, medium: 0.45, large: 0.6 },
+};
 const LOGO_MARGIN = 0.035;
 
+// Faint enough to keep the picture clear, strong enough to recognise the logo.
+export const WATERMARK_OPACITY = 0.3;
+
+// The logo fits a square box, so tall and wide logos both stay inside the picture.
 export function logoRect(setting: LogoSetting, canvas: Size, logoAspect: number): Rect {
   const base = Math.min(canvas.width, canvas.height);
-  const width = base * LOGO_WIDTH[setting.size];
-  const height = width / (logoAspect > 0 ? logoAspect : 1);
+  const box = base * LOGO_SIZE[setting.style][setting.size];
+  const aspect = logoAspect > 0 ? logoAspect : 1;
+  const width = aspect >= 1 ? box : box * aspect;
+  const height = aspect >= 1 ? box / aspect : box;
+  if (setting.position === 'center') {
+    return { x: (canvas.width - width) / 2, y: (canvas.height - height) / 2, width, height };
+  }
   const margin = base * LOGO_MARGIN;
   return {
-    x: setting.corner.endsWith('left') ? margin : canvas.width - margin - width,
-    y: setting.corner.startsWith('top') ? margin : canvas.height - margin - height,
+    x: setting.position.endsWith('left') ? margin : canvas.width - margin - width,
+    y: setting.position.startsWith('top') ? margin : canvas.height - margin - height,
     width,
     height,
   };

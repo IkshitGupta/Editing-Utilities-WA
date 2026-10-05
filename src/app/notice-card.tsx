@@ -54,7 +54,7 @@ const THEME_OPTIONS = (Object.keys(THEMES) as ThemeId[]).map((id) => ({
 }));
 const SIZE_OPTIONS = (Object.keys(CARD_SIZES) as CardSizeId[]).map((id) => ({
   value: id,
-  label: `${CARD_SIZES[id].label} · ${CARD_SIZES[id].hint}`,
+  label: CARD_SIZES[id].label,
 }));
 
 export default function NoticeCardScreen() {
@@ -128,18 +128,15 @@ export default function NoticeCardScreen() {
           <View className="flex-row gap-2 rounded-xl bg-brand-blush p-3">
             <Icon name="alert-circle" size={20} color={brand.magenta} />
             <Text className="flex-1 text-sm text-foreground">
-              This notice is too long to fit. Shorten it, or choose the Tall size for more room.
+              {style.size === 'square'
+                ? 'The notice is too long to fit. Shorten the text or choose Portrait 4:5.'
+                : 'The notice is too long to fit. Shorten the text.'}
             </Text>
           </View>
         ) : null}
 
         <Section title="Title">
-          <Input
-            value={title}
-            onChangeText={setTitle}
-            placeholder="For example, Holiday Notice"
-            maxLength={80}
-          />
+          <Input value={title} onChangeText={setTitle} placeholder="Enter a title" maxLength={80} />
           <ChoiceChips
             options={TITLE_IDEAS.map((idea) => ({ value: idea, label: idea }))}
             value={title}
@@ -152,7 +149,7 @@ export default function NoticeCardScreen() {
             multiline
             value={body}
             onChangeText={setBody}
-            placeholder="Dear parents, the school will remain closed on…"
+            placeholder="Enter the notice text"
             maxLength={1500}
             className="min-h-40"
           />
@@ -203,7 +200,7 @@ export default function NoticeCardScreen() {
           />
         </Section>
         <Text className="text-sm text-muted">
-          The school name, logo, address and phone come from Settings.
+          School name, logo, address and phone are taken from Settings.
         </Text>
       </ScrollView>
       <View

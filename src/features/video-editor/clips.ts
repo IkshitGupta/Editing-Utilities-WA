@@ -27,6 +27,7 @@ export async function loadClip(item: MediaItem): Promise<VideoClip> {
     height: info?.height || item.height,
     durationMs,
     hasAudio: info?.hasAudio ?? true,
+    bitrate: info?.bitrate ?? 0,
     startMs: 0,
     endMs: durationMs,
   };

@@ -104,19 +104,23 @@ describe('image crop geometry', () => {
 });
 
 describe('photo output sizes', () => {
-  it('shrinks WhatsApp photos to 1600 pixels on the long side', () => {
-    expect(outputSize(OUTPUT_PRESETS.whatsapp, 4000, 3000)).toEqual({ width: 1600, height: 1200 });
+  it('keeps every pixel of the crop at the original size', () => {
+    expect(outputSize(OUTPUT_PRESETS.original, 4000, 3000)).toEqual({ width: 4000, height: 3000 });
+    expect(outputSize(OUTPUT_PRESETS.original, 2999.6, 1687.4)).toEqual({
+      width: 3000,
+      height: 1687,
+    });
   });
 
-  it('never enlarges small photos', () => {
-    expect(outputSize(OUTPUT_PRESETS.whatsapp, 800, 600)).toEqual({ width: 800, height: 600 });
+  it('saves at high JPEG quality', () => {
+    expect(OUTPUT_PRESETS.original.jpegQuality).toBeGreaterThanOrEqual(95);
   });
 
-  it('uses the exact size for fixed presets', () => {
+  it('uses the exact size for the YouTube thumbnail', () => {
     expect(outputSize(OUTPUT_PRESETS['yt-thumbnail'], 3000, 1687)).toEqual({
       width: 1280,
       height: 720,
     });
-    expect(OUTPUT_PRESETS['fb-portrait'].shape).toBe('portrait');
+    expect(OUTPUT_PRESETS['yt-thumbnail'].shape).toBe('landscape');
   });
 });

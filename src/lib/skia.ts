@@ -46,10 +46,16 @@ export function layoutParagraph(
     textStyle.heightMultiplier = spec.lineHeight;
   }
   if (spec.shadow) {
+    // A tight dark edge keeps light text readable on bright areas; the soft shadow lifts it.
     textStyle.shadows = [
       {
-        color: Skia.Color('rgba(0, 0, 0, 0.65)'),
-        blurRadius: spec.fontSize * 0.12,
+        color: Skia.Color('rgba(0, 0, 0, 0.55)'),
+        blurRadius: spec.fontSize * 0.04,
+        offset: Skia.Point(0, 0),
+      },
+      {
+        color: Skia.Color('rgba(0, 0, 0, 0.6)'),
+        blurRadius: spec.fontSize * 0.14,
         offset: Skia.Point(0, spec.fontSize * 0.05),
       },
     ];
@@ -79,7 +85,7 @@ export function renderToBytes(
   const height = Math.round(size.height);
   const surface = Skia.Surface.MakeOffscreen(width, height) ?? Skia.Surface.Make(width, height);
   if (!surface) {
-    throw new Error('The phone ran out of memory while making the picture.');
+    throw new Error('Not enough memory to create this image.');
   }
   try {
     draw(surface.getCanvas());

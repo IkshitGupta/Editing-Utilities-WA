@@ -127,7 +127,10 @@ The app was tested on an Android 15 emulator on 1 October 2026:
 
 These still need a real phone:
 
-- [ ] Save a 2–3 minute video with the WhatsApp size and note how long it takes. The emulator encodes in software, so its timings don't apply.
+- [ ] Save a 2–3 minute video and note how long it takes and how big the file is. The emulator encodes in software, so its timings don't apply.
+- [ ] If the phone records 4K, save a 4K video and check it plays. A phone that can't encode 4K should save at a smaller size instead of failing.
+- [ ] Compare an edited photo and video with the originals at full size; they should look equally sharp.
+- [ ] Open the app and check the whole logo shows on the start-up screen.
 - [ ] Share 20–30 photos at once to WhatsApp Business and to Facebook, and check Facebook posts as the school Page.
 - [ ] Share a video to YouTube, sign in and upload it.
 - [ ] Pinch to zoom a photo and to resize text.

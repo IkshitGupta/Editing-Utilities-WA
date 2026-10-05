@@ -1,76 +1,78 @@
 import {
-  MIN_VIDEO_BITRATE,
-  VIDEO_PRESETS,
+  MAX_VIDEO_BITRATE,
   cropForAspect,
-  estimatedBytes,
   isFullFrame,
-  longestFittingSeconds,
   outputVideoSize,
   videoBitrate,
 } from '@/features/video-editor/presets';
 
 describe('video output size', () => {
-  it('makes 720p for WhatsApp from a 1080p landscape video', () => {
-    expect(outputVideoSize(16 / 9, VIDEO_PRESETS.whatsapp, 1080)).toEqual({
-      width: 1280,
-      height: 720,
-    });
+  it('keeps a 1080p video at 1080p', () => {
+    expect(outputVideoSize(16 / 9, 1080)).toEqual({ width: 1920, height: 1080 });
   });
 
   it('keeps portrait videos portrait', () => {
-    expect(outputVideoSize(9 / 16, VIDEO_PRESETS.youtube, 1080)).toEqual({
-      width: 1080,
-      height: 1920,
-    });
+    expect(outputVideoSize(9 / 16, 1080)).toEqual({ width: 1080, height: 1920 });
   });
 
   it('never enlarges a small video', () => {
-    expect(outputVideoSize(16 / 9, VIDEO_PRESETS.youtube, 480)).toEqual({
-      width: 854,
-      height: 480,
-    });
+    expect(outputVideoSize(16 / 9, 480)).toEqual({ width: 854, height: 480 });
+  });
+
+  it('keeps 4K videos at 4K', () => {
+    expect(outputVideoSize(16 / 9, 2160)).toEqual({ width: 3840, height: 2160 });
+  });
+
+  it('limits larger videos to 4K', () => {
+    expect(outputVideoSize(16 / 9, 4320)).toEqual({ width: 3840, height: 2160 });
+    expect(outputVideoSize(1, 3000)).toEqual({ width: 2160, height: 2160 });
   });
 
   it('always returns even sizes for the encoder', () => {
-    const size = outputVideoSize(4 / 3, VIDEO_PRESETS.whatsapp, 721);
+    const size = outputVideoSize(4 / 3, 721);
     expect(size.width % 2).toBe(0);
     expect(size.height % 2).toBe(0);
-  });
-
-  it('limits very wide videos to 1920 pixels', () => {
-    expect(outputVideoSize(3, VIDEO_PRESETS.youtube, 1080)).toEqual({ width: 1920, height: 640 });
   });
 });
 
 describe('video bitrate', () => {
-  it('uses the full WhatsApp quality for short clips', () => {
-    expect(videoBitrate(VIDEO_PRESETS.whatsapp, 30_000)).toEqual({
-      bitrate: 2_500_000,
-      tooLong: false,
-    });
+  const full = { width: 1920, height: 1080 };
+
+  it('matches the bitrate of a phone recording', () => {
+    expect(videoBitrate(full, [{ width: 1920, height: 1080, bitrate: 17_000_000 }])).toBe(
+      17_000_000
+    );
   });
 
-  it('lowers the quality of longer clips to stay near 16 MB', () => {
-    const { bitrate, tooLong } = videoBitrate(VIDEO_PRESETS.whatsapp, 120_000);
-    expect(tooLong).toBe(false);
-    expect(bitrate).toBeLessThan(2_500_000);
-    expect(estimatedBytes(bitrate, 120_000)).toBeLessThanOrEqual(16 * 1024 * 1024);
+  it('lowers the bitrate in step with a smaller crop', () => {
+    const square = { width: 1080, height: 1080 };
+    expect(videoBitrate(square, [{ width: 1920, height: 1080, bitrate: 16_000_000 }])).toBe(
+      9_000_000
+    );
   });
 
-  it('flags clips too long to fit', () => {
-    expect(videoBitrate(VIDEO_PRESETS.whatsapp, 10 * 60_000)).toEqual({
-      bitrate: MIN_VIDEO_BITRATE,
-      tooLong: true,
-    });
-    expect(longestFittingSeconds(VIDEO_PRESETS.whatsapp)).toBeGreaterThan(150);
+  it('gives already-compressed videos room so they lose no more detail', () => {
+    const small = { width: 854, height: 480 };
+    expect(videoBitrate(small, [{ width: 854, height: 480, bitrate: 500_000 }])).toBe(1_639_680);
   });
 
-  it('keeps the preset quality when there is no size target', () => {
-    expect(videoBitrate(VIDEO_PRESETS.youtube, 10 * 60_000)).toEqual({
-      bitrate: 8_000_000,
-      tooLong: false,
-    });
-    expect(longestFittingSeconds(VIDEO_PRESETS.youtube)).toBeNull();
+  it('uses a phone-camera rate when the file does not say', () => {
+    expect(videoBitrate(full, [{ width: 1920, height: 1080, bitrate: 0 }])).toBe(16_588_800);
+  });
+
+  it('follows the most detailed of the joined clips', () => {
+    const clips = [
+      { width: 1280, height: 720, bitrate: 3_000_000 },
+      { width: 1920, height: 1080, bitrate: 20_000_000 },
+    ];
+    expect(videoBitrate(full, clips)).toBe(20_000_000);
+  });
+
+  it('stays within what phone encoders accept', () => {
+    const huge = { width: 3840, height: 2160 };
+    expect(videoBitrate(huge, [{ width: 3840, height: 2160, bitrate: 400_000_000 }])).toBe(
+      MAX_VIDEO_BITRATE
+    );
   });
 });
 

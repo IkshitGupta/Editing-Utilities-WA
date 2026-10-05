@@ -40,11 +40,10 @@ Optional check: add a family member's phone to one Community. On that phone, con
 
 ## Send photos or videos to a class
 
-1. On **Home**, tap **Share to WhatsApp**, or select items in the **Media** tab and tap **WhatsApp**.
-2. Pick the photos and videos in the order you want them sent (up to 100).
-3. WhatsApp Business opens with everything attached. Tick the class Communities (up to 5 at once) and tap **Send**.
+1. After saving edited photos, a video or a notice card, tap **Share to WhatsApp**. To send something saved earlier, open the **Media** tab, tap the items in the order you want them sent (up to 100), then tap **WhatsApp**.
+2. WhatsApp Business opens with everything attached. Tick the class Communities (up to 5 at once) and tap **Send**.
 
-Tap **HD** in WhatsApp to send photos sharper.
+The app saves photos and videos at full quality. Tap **HD** in WhatsApp so they arrive sharp. To send photos you haven't edited, share them from the phone's Gallery app as usual.
 
 ## Post to the school Facebook Page
 
@@ -62,35 +61,34 @@ Tap **HD** in WhatsApp to send photos sharper.
 
 1. On **Home**, tap **Notice card**.
 2. Type a title, or tap one of the suggestions, then type the notice. The date is today's; tap **Change** to pick another.
-3. Choose a design (Letterhead, Colour band or Simple), colours and size (Square, or Tall for longer notices).
+3. Choose a design (Letterhead, Colour band or Simple), colours and size (Square, or Portrait 4:5 for longer notices).
 4. Tap **Save notice card**. The share buttons appear straight away.
 
-If a notice is too long to fit, the app tells you. Shorten it or choose the Tall size.
+If a notice is too long to fit, the app tells you. Shorten it or choose Portrait 4:5.
 
 ## Edit photos
 
-On **Home**, tap **Edit photos** and pick one or more photos, or tap **Take a photo and edit it**. Use the tabs at the bottom:
+On **Home**, tap **Edit photos** and pick one or more photos, or tap **Take a photo**. Use the tabs at the bottom:
 
-- **Crop**: choose a shape (Original, Square, Portrait 4:5, Wide 16:9 or Tall 9:16). Drag the photo to move it and pinch to zoom. **Turn left**, **Turn right** and **Mirror** are here too.
-- **Text**: tap **Add text**, type, and pick a colour and style. Drag the text to move it and pinch to resize it.
-- **Shapes**: add a box, circle or arrow to point something out.
-- **Logo**: add the school logo in a corner, in small, medium or large.
-- **Size**: WhatsApp, Facebook square, Facebook portrait, YouTube thumbnail or Full size.
+- **Crop**: choose a shape (Original, Square, Portrait 4:5, Wide 16:9 or Tall 9:16). Drag the photo to move it and pinch to zoom. **Rotate left**, **Rotate right** and **Flip** are here too.
+- **Text**: tap **Add text**, type, and pick a colour and style. Text starts with a soft **Shadow** so it reads on any photo; choose **Background** to put it on a box. Drag the text to move it and pinch to resize it. The dashed outline marks the selected text and isn't saved.
+- **Shapes**: add a rectangle, circle, arrow or line to point something out or underline it. A line can be horizontal or vertical.
+- **Logo**: add the school logo. **Solid** puts it in a corner. **Watermark** makes it semi-transparent so the photo shows through, in the centre or a corner. Both come in small, medium or large.
+- **Size**: **Original size** keeps every pixel of the photo, for the best quality. **YouTube thumbnail** makes a 1280 × 720 picture.
 
-Tap **Save and next** for each photo, or **Save all … photos this way** to give the rest the same shape, logo and size. Your original photos stay as they are.
+Tap **Save and next** for each photo, or **Save all … photos** to give the rest the same shape, logo and size. Your original photos stay as they are.
 
 ## Edit a video
 
 On **Home**, tap **Edit a video** and pick one or more videos. Several videos are joined into one.
 
-- **Trim**: drag the yellow handles to choose the part to keep.
-- **Shape**: choose Original, Wide 16:9, Tall 9:16 or Square, pick which part of the picture to keep, and turn the video.
-- **Sound**: keep the sound, mute it, or add music from a song on the phone. You can keep the video's own sound quietly under the music.
-- **Logo, text**: add the school logo and a caption.
+- **Trim**: drag the handles to set the start and end. **Save frame as thumbnail** saves the current frame as a 1280 × 720 picture for YouTube.
+- **Shape**: choose Original, Wide 16:9, Tall 9:16 (for Shorts and Reels) or Square, set the **Position** of the part to keep, and rotate the video.
+- **Sound**: keep the original sound, mute it, or add music from a song on the phone. You can keep the original sound in the background under the music. The music plays in the saved video, not in the preview.
+- **Logo & text**: add the school logo, solid or as a watermark, and a caption.
 - **Clips**: add more clips, change their order or remove one.
-- **Size**: WhatsApp (small and quick to send), YouTube, Shorts / Reels (tall) or Facebook. **Save this frame as a thumbnail** saves the paused frame as a picture for YouTube.
 
-Tap **Save video**. Keep the app open while it saves; the screen stays on until it's done.
+Tap **Save video**. Keep the app open while it saves; the screen stays on until it's done. The video keeps the size and quality of the original, up to 4K.
 
 ## The Media tab
 
@@ -98,9 +96,9 @@ Everything you save goes into the **School Admin** album on the phone and shows 
 
 ## Settings
 
-- **School details**: the name, address and phone shown on notice cards. **Restore** puts back the original details.
-- **Logo**: use another picture as the logo, or go back to the school logo.
-- **WhatsApp app**: choose whether sharing opens WhatsApp Business or WhatsApp.
+- **School details**: the name, address and phone shown on notice cards. **Reset** puts back the original details.
+- **Logo**: **Change logo** uses another picture as the logo; **Use default logo** goes back to the school logo.
+- **Sharing apps**: choose whether sharing opens WhatsApp Business or WhatsApp, and see whether Facebook and YouTube are installed.
 - **Check for updates**: gets the newest version of the app.
 
 ## Updates
@@ -118,5 +116,5 @@ Now and then a new install link is needed. Install it over the old app; your set
 ## If something goes wrong
 
 - **WhatsApp Business or Facebook isn't on the phone**: install it from the Play Store. For WhatsApp, you can also choose the other WhatsApp in **Settings**. Until then, the phone asks which app to use.
-- **The Media tab can't show photos**: tap **Open phone settings** and allow access to photos and videos.
-- **A video takes a long time to save**: keep the app open. The WhatsApp size saves fastest.
+- **The Media tab can't show photos**: tap **Open settings** and allow access to photos and videos.
+- **A video takes a long time to save**: keep the app open. Long videos and 4K videos take longest.

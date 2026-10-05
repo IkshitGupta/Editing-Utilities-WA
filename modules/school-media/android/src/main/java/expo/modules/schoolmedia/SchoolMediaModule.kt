@@ -80,12 +80,14 @@ class SchoolMediaModule : Module() {
       val rotation = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toIntOrNull() ?: 0
       val durationMs = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L
       val hasAudio = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_AUDIO) == "yes"
+      val bitrate = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_BITRATE)?.toIntOrNull() ?: 0
       val (displayWidth, displayHeight) = RenderMath.displaySize(width, height, rotation)
       return mapOf(
         "width" to displayWidth,
         "height" to displayHeight,
         "durationMs" to durationMs.toDouble(),
-        "hasAudio" to hasAudio
+        "hasAudio" to hasAudio,
+        "bitrate" to bitrate
       )
     } finally {
       runCatching { retriever.release() }

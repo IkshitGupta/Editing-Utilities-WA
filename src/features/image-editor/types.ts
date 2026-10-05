@@ -5,7 +5,7 @@ export type Rotation = 0 | 90 | 180 | 270;
 
 export type CropShapeId = 'original' | 'square' | 'portrait' | 'landscape' | 'tall';
 
-export type OutputPresetId = 'whatsapp' | 'fb-square' | 'fb-portrait' | 'yt-thumbnail' | 'full';
+export type OutputPresetId = 'original' | 'yt-thumbnail';
 
 export type CropState = {
   rotation: Rotation;

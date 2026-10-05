@@ -21,6 +21,7 @@ import androidx.media3.effect.OverlayEffect
 import androidx.media3.effect.Presentation
 import androidx.media3.effect.ScaleAndRotateTransformation
 import androidx.media3.effect.TextureOverlay
+import androidx.media3.transformer.AudioEncoderSettings
 import androidx.media3.transformer.Composition
 import androidx.media3.transformer.DefaultEncoderFactory
 import androidx.media3.transformer.EditedMediaItem
@@ -103,8 +104,12 @@ class VideoRenderer(
     val videoSettings = VideoEncoderSettings.Builder()
       .setBitrate(spec.videoBitrate)
       .build()
+    val audioSettings = AudioEncoderSettings.Builder()
+      .setBitrate(AUDIO_BITRATE)
+      .build()
     val encoderFactory = DefaultEncoderFactory.Builder(context)
       .setRequestedVideoEncoderSettings(videoSettings)
+      .setRequestedAudioEncoderSettings(audioSettings)
       .setEnableFallback(true)
       .build()
 
@@ -221,9 +226,12 @@ class VideoRenderer(
   private fun gain(volume: Double): AudioProcessor =
     GainProcessor(DefaultGainProvider.Builder(RenderMath.clampVolume(volume)).build())
 
+  // Media3 blends overlay pixels as straight (not premultiplied) colours, so the layer is decoded
+  // that way. This keeps the faded watermark and soft text shadows at their true colours.
   private fun loadBitmap(uri: String): Bitmap {
+    val options = BitmapFactory.Options().apply { inPremultiplied = false }
     val bitmap = context.contentResolver.openInputStream(Uri.parse(uri))?.use {
-      BitmapFactory.decodeStream(it)
+      BitmapFactory.decodeStream(it, null, options)
     }
     return requireNotNull(bitmap) { "The logo and text layer could not be read." }
   }
@@ -232,5 +240,8 @@ class VideoRenderer(
     private const val OUTPUT_FOLDER = "rendered-videos"
     private const val PROGRESS_INTERVAL_MS = 500L
     private const val FULL_VOLUME = 0.999
+
+    // Phones record stereo sound at about 256 kbps; 192 kbps AAC keeps it clear.
+    private const val AUDIO_BITRATE = 192_000
   }
 }

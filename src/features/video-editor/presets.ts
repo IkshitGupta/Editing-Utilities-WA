@@ -9,115 +9,56 @@ export type VideoShapeId = 'original' | 'landscape' | 'tall' | 'square';
 export const VIDEO_SHAPES: Record<VideoShapeId, { label: string; aspect: number | null }> = {
   original: { label: 'Original', aspect: null },
   landscape: { label: 'Wide 16:9', aspect: 16 / 9 },
-  tall: { label: 'Tall 9:16', aspect: 9 / 16 },
+  tall: { label: 'Tall 9:16 (Shorts, Reels)', aspect: 9 / 16 },
   square: { label: 'Square', aspect: 1 },
 };
 
-export type VideoPresetId = 'whatsapp' | 'youtube' | 'shorts' | 'facebook';
+// Videos keep their own size, up to 4K. A phone that can't encode the size it is given falls
+// back to the nearest size it can.
+const MAX_LONG_SIDE = 3840;
+const MAX_SHORT_SIDE = 2160;
 
-export type VideoPreset = {
-  id: VideoPresetId;
-  label: string;
-  hint: string;
-  shortSide: number;
-  bitrate: number;
-  shape?: VideoShapeId;
-  // Lower the quality of long videos so the file stays near this size.
-  targetBytes?: number;
-};
-
-export const VIDEO_PRESETS: Record<VideoPresetId, VideoPreset> = {
-  whatsapp: {
-    id: 'whatsapp',
-    label: 'WhatsApp',
-    hint: 'Small file, quick to send (720p)',
-    shortSide: 720,
-    bitrate: 2_500_000,
-    targetBytes: 16 * 1024 * 1024,
-  },
-  youtube: {
-    id: 'youtube',
-    label: 'YouTube',
-    hint: 'Full HD (1080p)',
-    shortSide: 1080,
-    bitrate: 8_000_000,
-  },
-  shorts: {
-    id: 'shorts',
-    label: 'Shorts / Reels',
-    hint: 'Tall 9:16 for phones',
-    shortSide: 1080,
-    bitrate: 8_000_000,
-    shape: 'tall',
-  },
-  facebook: {
-    id: 'facebook',
-    label: 'Facebook',
-    hint: 'Full HD, smaller file',
-    shortSide: 1080,
-    bitrate: 6_000_000,
-  },
-};
-
-export const VIDEO_PRESET_ORDER: readonly VideoPresetId[] = [
-  'whatsapp',
-  'youtube',
-  'shorts',
-  'facebook',
-];
-
-export const AUDIO_BITRATE = 128_000;
-export const MIN_VIDEO_BITRATE = 600_000;
-const MAX_LONG_SIDE = 1920;
-// Leaves room for the MP4 container and audio peaks.
-const SIZE_SAFETY = 0.92;
+// Bits per second for each pixel of the frame. Phones record 1080p video at about 8, and
+// 4K video at about 6. Re-encoding at the source's own rate keeps its detail; the floor stops
+// already-compressed videos, such as ones received on WhatsApp, from losing more.
+const MIN_BITS_PER_PIXEL = 4;
+const UNKNOWN_BITS_PER_PIXEL = 8;
+const MIN_VIDEO_BITRATE = 1_000_000;
+export const MAX_VIDEO_BITRATE = 100_000_000;
 
 function even(value: number) {
   return Math.max(2, Math.round(value / 2) * 2);
 }
 
-// Never enlarges the video; video encoders need even dimensions.
-export function outputVideoSize(
-  aspect: number,
-  preset: VideoPreset,
-  sourceShortSide: number
-): Size {
-  const shortSide = Math.min(preset.shortSide, Math.max(2, sourceShortSide));
-  let width = aspect >= 1 ? shortSide * aspect : shortSide;
-  let height = aspect >= 1 ? shortSide : shortSide / aspect;
-  const longSide = Math.max(width, height);
-  if (longSide > MAX_LONG_SIDE) {
-    width *= MAX_LONG_SIDE / longSide;
-    height *= MAX_LONG_SIDE / longSide;
-  }
-  return { width: even(width), height: even(height) };
+// Keeps the source's resolution and never enlarges it; video encoders need even dimensions.
+export function outputVideoSize(aspect: number, sourceShortSide: number): Size {
+  const shortSide = Math.max(2, sourceShortSide);
+  const width = aspect >= 1 ? shortSide * aspect : shortSide;
+  const height = aspect >= 1 ? shortSide : shortSide / aspect;
+  const scale = Math.min(
+    1,
+    MAX_LONG_SIDE / Math.max(width, height),
+    MAX_SHORT_SIDE / Math.min(width, height)
+  );
+  return { width: even(width * scale), height: even(height * scale) };
 }
 
-export function videoBitrate(
-  preset: VideoPreset,
-  durationMs: number
-): { bitrate: number; tooLong: boolean } {
-  if (!preset.targetBytes) {
-    return { bitrate: preset.bitrate, tooLong: false };
-  }
-  const seconds = Math.max(1, durationMs / 1000);
-  const budget = (preset.targetBytes * 8 * SIZE_SAFETY) / seconds - AUDIO_BITRATE;
-  if (budget < MIN_VIDEO_BITRATE) {
-    return { bitrate: MIN_VIDEO_BITRATE, tooLong: true };
-  }
-  return { bitrate: Math.round(Math.min(preset.bitrate, budget)), tooLong: false };
-}
+export type BitrateSource = { width: number; height: number; bitrate: number };
 
-// The longest video that still fits the preset's target size at the lowest quality.
-export function longestFittingSeconds(preset: VideoPreset): number | null {
-  if (!preset.targetBytes) {
-    return null;
-  }
-  return Math.floor((preset.targetBytes * 8 * SIZE_SAFETY) / (MIN_VIDEO_BITRATE + AUDIO_BITRATE));
-}
-
-export function estimatedBytes(videoBitrateValue: number, durationMs: number): number {
-  return ((videoBitrateValue + AUDIO_BITRATE) * (durationMs / 1000)) / 8;
+// Uses the highest bits per pixel among the clips, so the saved video is as detailed as the
+// best of them.
+export function videoBitrate(size: Size, clips: readonly BitrateSource[]): number {
+  const bitsPerPixel = Math.max(
+    MIN_BITS_PER_PIXEL,
+    ...clips.map((clip) =>
+      clip.bitrate > 0 && clip.width > 0 && clip.height > 0
+        ? clip.bitrate / (clip.width * clip.height)
+        : UNKNOWN_BITS_PER_PIXEL
+    )
+  );
+  return Math.round(
+    clamp(bitsPerPixel * size.width * size.height, MIN_VIDEO_BITRATE, MAX_VIDEO_BITRATE)
+  );
 }
 
 export const FULL_FRAME: CropRect = { left: 0, top: 0, right: 1, bottom: 1 };

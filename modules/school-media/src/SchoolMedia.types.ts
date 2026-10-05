@@ -4,6 +4,8 @@ export type VideoInfo = {
   height: number;
   durationMs: number;
   hasAudio: boolean;
+  // Bits per second for the whole file, or 0 when the file doesn't say.
+  bitrate: number;
 };
 
 // Fractions of the (already rotated) frame, measured from the top-left corner.

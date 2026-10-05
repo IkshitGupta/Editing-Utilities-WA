@@ -14,7 +14,7 @@ export async function shareTo(destination: ShareDestination, items: MediaItem[])
   const kinds = items.map((item) => item.kind);
   const check = checkShare(destination, kinds);
   if (!check.ok) {
-    Alert.alert('Not ready to share', check.message);
+    Alert.alert('Cannot share', check.message);
     return;
   }
   const app = targetApp(destination, getSettings());
@@ -23,7 +23,7 @@ export async function shareTo(destination: ShareDestination, items: MediaItem[])
       items.map((item) => item.uri),
       shareMimeType(kinds),
       app.packageName,
-      `Share with ${app.label}`
+      'Share'
     );
   } catch (error) {
     Alert.alert(`Could not open ${app.label}`, errorMessage(error));

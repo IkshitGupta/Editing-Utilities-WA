@@ -21,6 +21,7 @@ import {
   isLightColor,
   logoRect,
   shapeRect,
+  WATERMARK_OPACITY,
   type Point,
   type Rect,
   type Size,
@@ -138,36 +139,39 @@ function drawShape(canvas: SkCanvas, shape: ShapeOverlay, size: Size) {
     canvas.drawOval(toSkRect(rect), paint);
   } else {
     const { from, to } = arrowLine(rect, shape.direction);
-    const length = Math.hypot(to.x - from.x, to.y - from.y);
-    const [left, right] = arrowHead(from, to, Math.max(strokeWidth * 3, length * 0.28));
     canvas.drawLine(from.x, from.y, to.x, to.y, paint);
-    canvas.drawLine(to.x, to.y, left.x, left.y, paint);
-    canvas.drawLine(to.x, to.y, right.x, right.y, paint);
+    if (shape.shape === 'arrow') {
+      const length = Math.hypot(to.x - from.x, to.y - from.y);
+      const [left, right] = arrowHead(from, to, Math.max(strokeWidth * 3, length * 0.28));
+      canvas.drawLine(to.x, to.y, left.x, left.y, paint);
+      canvas.drawLine(to.x, to.y, right.x, right.y, paint);
+    }
   }
 }
 
 export function drawLogo(canvas: SkCanvas, logo: SkImage, setting: LogoSetting, size: Size) {
   const rect = logoRect(setting, size, logo.width() / logo.height());
+  const paint = Skia.Paint();
+  paint.setAlphaf(setting.style === 'watermark' ? WATERMARK_OPACITY : 1);
   canvas.drawImageRectOptions(
     logo,
     Skia.XYWHRect(0, 0, logo.width(), logo.height()),
     toSkRect(rect),
     FilterMode.Linear,
     MipmapMode.Linear,
-    null
+    paint
   );
 }
 
+// A dashed outline reads as "selected" rather than as part of the picture, and it is never saved.
 function drawSelection(canvas: SkCanvas, bounds: Rect, size: Size) {
   const width = Math.max(1.5, Math.min(size.width, size.height) * 0.004);
-  const outer = {
-    x: bounds.x - width,
-    y: bounds.y - width,
-    width: bounds.width + width * 2,
-    height: bounds.height + width * 2,
-  };
-  canvas.drawRect(toSkRect(outer), strokePaint('rgba(17, 24, 39, 0.8)', width * 2));
-  canvas.drawRect(toSkRect(bounds), strokePaint('#FFFFFF', width));
+  const rect = toSkRect(bounds);
+  canvas.drawRect(rect, strokePaint('rgba(17, 24, 39, 0.8)', width * 2));
+  const dashes = strokePaint('#FFFFFF', width);
+  dashes.setStrokeCap(StrokeCap.Butt);
+  dashes.setPathEffect(Skia.PathEffect.MakeDash([width * 4, width * 3], 0));
+  canvas.drawRect(rect, dashes);
 }
 
 // Overlays are drawn in a coordinate space from (0, 0) to the picture size.

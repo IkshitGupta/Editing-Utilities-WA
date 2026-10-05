@@ -6,27 +6,12 @@ import { ChoiceChips } from '@/components/ui/choice-chips';
 import { Icon } from '@/components/ui/icon';
 import { Section } from '@/components/ui/section';
 import { rotateClockwise, rotateCounterClockwise } from '@/features/image-editor/geometry';
-import { formatBytes, formatDuration } from '@/lib/format';
+import { formatDuration } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { brand, ui } from '@/theme/colors';
 
-import {
-  clipCrop,
-  trimmedDurationMs,
-  type SoundMode,
-  type VideoClip,
-  type VideoEdit,
-} from './edit-list';
-import {
-  VIDEO_PRESETS,
-  VIDEO_PRESET_ORDER,
-  VIDEO_SHAPES,
-  estimatedBytes,
-  longestFittingSeconds,
-  videoBitrate,
-  type VideoPresetId,
-  type VideoShapeId,
-} from './presets';
+import { clipCrop, type SoundMode, type VideoClip, type VideoEdit } from './edit-list';
+import { VIDEO_SHAPES, type VideoShapeId } from './presets';
 
 type PanelProps = {
   edit: VideoEdit;
@@ -67,18 +52,14 @@ export function VideoShapePanel({
         { value: 'center' as const, label: 'Centre' },
         { value: 'end' as const, label: 'Bottom' },
       ];
-  const chooseShape = (shape: VideoShapeId) => {
-    // Shorts are always tall, so another shape switches back to the YouTube size.
-    const preset = edit.preset === 'shorts' && shape !== 'tall' ? 'youtube' : edit.preset;
-    onChange({ shape, preset, position: 0 });
-  };
+  const chooseShape = (shape: VideoShapeId) => onChange({ shape, position: 0 });
   return (
     <View className="gap-4">
       <Section title="Shape">
         <ChoiceChips options={SHAPE_OPTIONS} value={edit.shape} onChange={chooseShape} />
       </Section>
       {cropsSides || cropsTopBottom ? (
-        <Section title="Keep this part">
+        <Section title="Position">
           <ChoiceChips
             options={placements}
             value={placementOf(edit.position)}
@@ -91,36 +72,34 @@ export function VideoShapePanel({
           size="sm"
           variant="secondary"
           icon="arrow-undo-outline"
-          label="Turn left"
+          label="Rotate left"
           onPress={() => onChange({ rotation: rotateCounterClockwise(edit.rotation) })}
         />
         <Button
           size="sm"
           variant="secondary"
           icon="arrow-redo-outline"
-          label="Turn right"
+          label="Rotate right"
           onPress={() => onChange({ rotation: rotateClockwise(edit.rotation) })}
         />
       </View>
       {edit.clips.length > 1 ? (
-        <Text className="text-sm text-muted">
-          Every clip is cropped to the same shape so the joined video fits together.
-        </Text>
+        <Text className="text-sm text-muted">All clips are cropped to the same shape.</Text>
       ) : null}
     </View>
   );
 }
 
 const SOUND_OPTIONS = [
-  { value: 'original', label: 'Keep sound', icon: 'volume-high-outline' },
+  { value: 'original', label: 'Original sound', icon: 'volume-high-outline' },
   { value: 'mute', label: 'Mute', icon: 'volume-mute-outline' },
   { value: 'music', label: 'Add music', icon: 'musical-notes-outline' },
 ] as const satisfies readonly { value: SoundMode; label: string; icon: string }[];
 
 const VOLUME_OPTIONS = [
-  { value: '0.3', label: 'Soft' },
+  { value: '0.3', label: 'Low' },
   { value: '0.6', label: 'Medium' },
-  { value: '1', label: 'Loud' },
+  { value: '1', label: 'High' },
 ] as const;
 
 function volumeKey(volume: number): (typeof VOLUME_OPTIONS)[number]['value'] {
@@ -163,7 +142,7 @@ export function SoundPanel({ edit, onChange, onPickMusic }: SoundPanelProps) {
           </Section>
           <View className="flex-row items-center justify-between rounded-xl border border-border px-4 py-3">
             <Text className="flex-1 pr-3 text-base text-foreground">
-              Keep the video&apos;s own sound quietly
+              Keep original sound in the background
             </Text>
             <Switch
               value={edit.mixOriginal}
@@ -173,8 +152,7 @@ export function SoundPanel({ edit, onChange, onPickMusic }: SoundPanelProps) {
             />
           </View>
           <Text className="text-sm text-muted">
-            The music plays from the start and repeats until the video ends. You hear it in the
-            saved video.
+            The music loops until the video ends. It plays in the saved video, not in this preview.
           </Text>
         </>
       ) : null}
@@ -271,71 +249,9 @@ export function ClipsPanel({
           </Pressable>
         );
       })}
-      <Button variant="secondary" icon="add" label="Add another clip" onPress={onAddClips} />
+      <Button variant="secondary" icon="add" label="Add clips" onPress={onAddClips} />
       <Text className="text-sm text-muted">
-        Clips are joined from top to bottom. Tap a clip to trim it.
-      </Text>
-    </View>
-  );
-}
-
-type OutputPanelProps = PanelProps & {
-  onSaveThumbnail: () => void;
-};
-
-export function OutputPanel({ edit, onChange, onSaveThumbnail }: OutputPanelProps) {
-  const totalMs = trimmedDurationMs(edit.clips);
-  const preset = VIDEO_PRESETS[edit.preset];
-  const { bitrate, tooLong } = videoBitrate(preset, totalMs);
-  const choose = (id: VideoPresetId) => {
-    const next = VIDEO_PRESETS[id];
-    onChange(next.shape ? { preset: id, shape: next.shape, position: 0 } : { preset: id });
-  };
-  const fittingSeconds = longestFittingSeconds(preset);
-  return (
-    <View className="gap-2">
-      {VIDEO_PRESET_ORDER.map((id) => {
-        const option = VIDEO_PRESETS[id];
-        const selected = edit.preset === id;
-        return (
-          <Pressable
-            key={id}
-            accessibilityRole="radio"
-            accessibilityState={{ selected }}
-            onPress={() => choose(id)}
-            className={cn(
-              'flex-row items-center gap-3 rounded-xl border px-4 py-3',
-              selected ? 'border-brand-blue bg-brand-blue/10' : 'border-border bg-background'
-            )}>
-            <Icon
-              name={selected ? 'radio-button-on' : 'radio-button-off'}
-              size={22}
-              color={brand.blue}
-            />
-            <View className="flex-1">
-              <Text className="text-base font-semibold text-foreground">{option.label}</Text>
-              <Text className="text-sm text-muted">{option.hint}</Text>
-            </View>
-          </Pressable>
-        );
-      })}
-      <Text className="pt-1 text-sm text-muted">
-        {formatDuration(totalMs)} long, about {formatBytes(estimatedBytes(bitrate, totalMs))}.
-      </Text>
-      {tooLong && fittingSeconds ? (
-        <Text className="text-sm text-danger">
-          This video is long for WhatsApp. Trim it to under {formatDuration(fittingSeconds * 1000)}{' '}
-          to keep it small and sharp.
-        </Text>
-      ) : null}
-      <Button
-        variant="secondary"
-        icon="image-outline"
-        label="Save this frame as a thumbnail"
-        onPress={onSaveThumbnail}
-      />
-      <Text className="text-sm text-muted">
-        Saves the paused frame as a 1280 × 720 picture with the logo and caption, ready for YouTube.
+        Clips are joined in this order. Tap a clip to select it for trimming.
       </Text>
     </View>
   );

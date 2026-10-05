@@ -23,61 +23,30 @@ export type OutputPreset = {
   shape?: CropShapeId;
   width?: number;
   height?: number;
-  longSide?: number;
   jpegQuality: number;
 };
 
+// Pictures keep the cropped photo's own pixels, so editing never makes them less sharp.
+// WhatsApp, Facebook and YouTube shrink pictures themselves when they need to.
 export const OUTPUT_PRESETS: Record<OutputPresetId, OutputPreset> = {
-  whatsapp: {
-    id: 'whatsapp',
-    label: 'WhatsApp',
-    hint: 'Sharp and quick to send',
-    longSide: 1600,
-    jpegQuality: 85,
-  },
-  'fb-square': {
-    id: 'fb-square',
-    label: 'Facebook square',
-    hint: '1080 × 1080',
-    shape: 'square',
-    width: 1080,
-    height: 1080,
-    jpegQuality: 90,
-  },
-  'fb-portrait': {
-    id: 'fb-portrait',
-    label: 'Facebook portrait',
-    hint: '1080 × 1350',
-    shape: 'portrait',
-    width: 1080,
-    height: 1350,
-    jpegQuality: 90,
+  original: {
+    id: 'original',
+    label: 'Original size',
+    hint: 'Full resolution, best quality',
+    jpegQuality: 95,
   },
   'yt-thumbnail': {
     id: 'yt-thumbnail',
     label: 'YouTube thumbnail',
-    hint: '1280 × 720',
+    hint: '1280 × 720, the size YouTube recommends',
     shape: 'landscape',
     width: 1280,
     height: 720,
-    jpegQuality: 90,
-  },
-  full: {
-    id: 'full',
-    label: 'Full size',
-    hint: 'Largest file, best for printing',
-    longSide: 3000,
-    jpegQuality: 92,
+    jpegQuality: 95,
   },
 };
 
-export const OUTPUT_PRESET_ORDER: readonly OutputPresetId[] = [
-  'whatsapp',
-  'fb-square',
-  'fb-portrait',
-  'yt-thumbnail',
-  'full',
-];
+export const OUTPUT_PRESET_ORDER: readonly OutputPresetId[] = ['original', 'yt-thumbnail'];
 
 export function cropShape(id: CropShapeId): CropShape {
   return CROP_SHAPES.find((shape) => shape.id === id) ?? CROP_SHAPES[0];
@@ -91,10 +60,8 @@ export function outputSize(
   if (preset.width && preset.height) {
     return { width: preset.width, height: preset.height };
   }
-  const longest = Math.max(cropWidth, cropHeight);
-  const scale = preset.longSide ? Math.min(1, preset.longSide / longest) : 1;
   return {
-    width: Math.max(1, Math.round(cropWidth * scale)),
-    height: Math.max(1, Math.round(cropHeight * scale)),
+    width: Math.max(1, Math.round(cropWidth)),
+    height: Math.max(1, Math.round(cropHeight)),
   };
 }
