@@ -1,7 +1,8 @@
 {
   "expo": {
-    "name": "Walnut Academy",
+    "name": "Walnut Admin",
     "slug": "walnut-academy-admin",
+    "owner": "sting1712",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -10,6 +11,9 @@
     "platforms": ["android"],
     "runtimeVersion": {
       "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/fec426e3-86c5-4588-8d0a-073c5722e73f"
     },
     "android": {
       "package": "com.walnutacademy.admin",
@@ -21,7 +25,8 @@
       "predictiveBackGestureEnabled": false,
       "blockedPermissions": [
         "android.permission.RECORD_AUDIO",
-        "android.permission.ACCESS_MEDIA_LOCATION"
+        "android.permission.ACCESS_MEDIA_LOCATION",
+        "android.permission.SYSTEM_ALERT_WINDOW"
       ]
     },
     "plugins": [
@@ -44,7 +49,7 @@
       [
         "expo-image-picker",
         {
-          "cameraPermission": "Allow Walnut Academy to take photos for school posts.",
+          "cameraPermission": "Allow Walnut Admin to take photos for school posts.",
           "microphonePermission": false
         }
       ],
@@ -62,11 +67,24 @@
           "recordAudioAndroid": false,
           "enableBackgroundPlayback": false
         }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "buildArchs": ["armeabi-v7a", "arm64-v8a"]
+          }
+        }
       ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "fec426e3-86c5-4588-8d0a-073c5722e73f"
+      }
     }
   }
 }

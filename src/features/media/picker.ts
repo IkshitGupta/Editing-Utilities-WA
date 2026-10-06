@@ -41,7 +41,7 @@ export async function takePhoto(): Promise<MediaItem | null> {
   if (!permission.granted) {
     Alert.alert(
       'Camera access needed',
-      'Allow camera access for Walnut Academy in the phone settings.'
+      'Allow camera access for Walnut Admin in the phone settings.'
     );
     return null;
   }

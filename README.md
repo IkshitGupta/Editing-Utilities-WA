@@ -1,4 +1,4 @@
-# Walnut Academy app
+# Walnut Admin
 
 An Android app for Walnut Academy, Jaipur. It edits school photos, videos and notices on the phone and hands them to WhatsApp Business, Facebook and YouTube for posting. Everything runs on the phone: there is no server, no sign-in, no API key and no running cost.
 
@@ -90,5 +90,7 @@ Changes to screens and logic reload straight away. Changes under `modules/school
 - **Error messages.** `src/lib/errors.ts` shows the app's own messages as they are. Technical text, such as Java exceptions, status codes, file paths and JavaScript errors like `TypeError`, becomes a plain cause (full storage, low memory, no internet, no access, a missing file) or a general message. The full text goes to the log: `adb logcat -s ReactNativeJS`.
 - **Splash logo size.** Android 12 and later show the start-up logo inside a 192 dp circle, so `imageWidth` in `app.json` is 150 to keep the whole shield inside it. A larger value crops the shield's corners.
 - **NDK version.** `plugins/with-app-ndk-version.js` points libraries that don't name an NDK version, such as `expo-updates`, at the app's NDK, so builds need only NDK 27.1.12297006.
+- **Processor types.** `expo-build-properties` limits builds to ARM code (`armeabi-v7a` and `arm64-v8a`, the `buildArchs` in `app.json`), the processors phones use. Adding x86 and x86_64, which only emulators use, would make the APK about 70 MB larger. For an emulator, build locally with `-PreactNativeArchitectures=x86_64`.
+- **Blocked permissions.** `blockedPermissions` in `app.json` removes permissions that libraries or Expo's template add but the app doesn't use: recording audio, media location and "Display over other apps" (`SYSTEM_ALERT_WINDOW`).
 - **Kotlin records.** Records passed from JavaScript to the Kotlin module are marked `@OptimizedRecord`, like Expo's own modules, so Expo converts them without reflection.
 - **Device testing.** The app has been tested on an Android 15 emulator. The [phone checklist](docs/release.md#phone-checklist) lists what still needs a real phone.

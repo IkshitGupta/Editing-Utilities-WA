@@ -11,22 +11,12 @@ The app is built in the cloud with Expo Application Services (EAS) and installed
    eas login
    ```
 
-2. Link the project to EAS. This adds `extra.eas.projectId` and `owner` to `app.json`:
+2. The project is already linked to EAS, with over-the-air updates turned on: `app.json` has `owner`, `extra.eas.projectId` and `updates.url`. The build profiles in `eas.json` set the update channels, and `runtimeVersion` uses the fingerprint policy.
 
-   ```sh
-   eas init
-   ```
+   To move the project to another Expo account, run `eas init --force` and `eas update:configure -p android`. When this project was linked, they wrote an expanded copy of the settings into `app.json`, including duplicate `blockedPermissions` and a `permissions` list without the Android version limits on storage access. Keep only their `owner`, `extra.eas.projectId` and `updates.url` changes.
 
-3. Turn on over-the-air updates. This adds `updates.url` to `app.json`:
-
-   ```sh
-   eas update:configure
-   ```
-
-   The build profiles in `eas.json` already set the update channels, and `runtimeVersion` uses the fingerprint policy.
-
-4. Make the first production build (see [Building](#building)). When EAS offers to generate an Android keystore, accept; EAS stores it and signs every later build with it.
-5. Back up the signing key: run `eas credentials -p android`, choose the `production` profile and download the keystore. Keep the file and its passwords in a password manager. The download is saved in the project folder, where `.gitignore` keeps it out of Git; move it into the password manager rather than leaving it there. Android only installs an update over the existing app if it's signed with the same key.
+3. Make the first production build (see [Building](#building)). When EAS offers to generate an Android keystore, accept; EAS stores it and signs every later build with it.
+4. Back up the signing key: run `eas credentials -p android`, choose the `production` profile and download the keystore. Keep the file and its passwords in a password manager. The download is saved in the project folder, where `.gitignore` keeps it out of Git; move it into the password manager rather than leaving it there. Android only installs an update over the existing app if it's signed with the same key.
 
 ## Android developer verification
 
@@ -84,7 +74,7 @@ Local builds need JDK 17 and an Android SDK with `platforms;android-36`, `build-
    .\gradlew.bat assembleRelease
    ```
 
-   The debug APK loads its JavaScript from Metro, which suits an emulator. The release APK (`android/app/build/outputs/apk/release/app-release.apk`) carries its JavaScript and runs on its own. Local builds are signed with a test key, so uninstall them before installing an EAS build on the same phone.
+   The debug APK loads its JavaScript from Metro, which suits an emulator. The release APK (`android/app/build/outputs/apk/release/app-release.apk`) carries its JavaScript and runs on its own. Builds contain only ARM code for phones, so for an x86_64 emulator add `-PreactNativeArchitectures=x86_64` to either command. Local builds are signed with a test key, so uninstall them before installing an EAS build on the same phone.
 
 4. To run the debug build, start an emulator, install the APK with `adb install`, run `npm start` and open the project from the development build.
 

@@ -1,12 +1,12 @@
-# Walnut Academy app: user guide
+# Walnut Admin: user guide
 
-The Walnut Academy app gets photos, videos and notices ready on your phone and passes them to WhatsApp Business, Facebook and YouTube for posting. It never posts anything by itself.
+Walnut Admin gets the school's photos, videos and notices ready on your phone and passes them to WhatsApp Business, Facebook and YouTube for posting. It never posts anything by itself.
 
 ## Install the app
 
 1. On your phone, open the install link you were sent.
 2. Download the file, open it and tap **Install**. If the phone asks, allow your browser to install apps.
-3. Open **Walnut Academy**. On Android 10 or older, allow access to photos and videos when asked.
+3. Open **Walnut Admin**. On Android 10 or older, allow access to photos and videos when asked.
 
 The school name, logo, address and phone are already filled in. You can change them in **Settings**.
 
@@ -119,5 +119,5 @@ Now and then a new install link is needed. Install it over the old app, without 
 
 - **WhatsApp Business or Facebook isn't on the phone**: install it from the Play Store. For WhatsApp, you can also choose the other WhatsApp in **Settings**. Until then, the phone asks which app to use.
 - **The Media tab can't show photos (Android 10 or older)**: tap **Open settings** and allow access to photos and videos.
-- **Items saved before the app was reinstalled are missing from the Media tab**: they're still in the phone's gallery. To show them in the Media tab too, tap **Allow access** at the end of the list and choose **Allow all** (**Allow** on Android 13 and older). The button goes away once you've answered. To change your answer later, open the phone's **Settings > Apps > Walnut Academy > Permissions** and allow all **Photos and videos** (called **Files and media** on older phones).
+- **Items saved before the app was reinstalled are missing from the Media tab**: they're still in the phone's gallery. To show them in the Media tab too, tap **Allow access** at the end of the list and choose **Allow all** (**Allow** on Android 13 and older). The button goes away once you've answered. To change your answer later, open the phone's **Settings > Apps > Walnut Admin > Permissions** and allow all **Photos and videos** (called **Files and media** on older phones).
 - **A video takes a long time to save**: keep the app open. Long videos and 4K videos take longest.
