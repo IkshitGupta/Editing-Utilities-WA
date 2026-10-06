@@ -46,14 +46,11 @@ import {
   type VideoClip,
   type VideoEdit,
 } from '@/features/video-editor/edit-list';
+import { useMusicPreview } from '@/features/video-editor/music-preview';
 import { ClipsPanel, SoundPanel, VideoShapePanel } from '@/features/video-editor/panels';
-import {
-  configurePlayer,
-  currentTimeMs,
-  seekTo,
-  setMuted,
-} from '@/features/video-editor/player-control';
+import { configurePlayer, currentTimeMs, seekTo } from '@/features/video-editor/player-control';
 import { TrimBar } from '@/features/video-editor/trim-bar';
+import { musicFileUri } from '@/features/video-editor/tunes';
 import { VideoPreview } from '@/features/video-editor/video-preview';
 import { errorCode, errorMessage } from '@/lib/errors';
 import { deleteTemporaryFile, outputName } from '@/lib/files';
@@ -203,10 +200,7 @@ export default function VideoEditorScreen() {
 
   const activeClip = edit?.clips.find((clip) => clip.id === activeId) ?? edit?.clips[0] ?? null;
   const player = useVideoPlayer(activeClip?.uri ?? null, configurePlayer);
-
-  useEffect(() => {
-    setMuted(player, edit?.sound !== 'original');
-  }, [player, edit?.sound]);
+  const musicPreview = useMusicPreview(player, edit, activeClip);
 
   useEventListener(player, 'playingChange', ({ isPlaying }) => {
     playingNow.current = isPlaying;
@@ -255,6 +249,9 @@ export default function VideoEditorScreen() {
 
   const selectClip = (id: string) => {
     player.pause();
+    // The clip opens in a new player, which starts paused; the old player's pause goes unreported.
+    playingNow.current = false;
+    setPlaying(false);
     setActiveId(id);
     setPositionMs(0);
   };
@@ -299,7 +296,7 @@ export default function VideoEditorScreen() {
     }
     const [song] = result.assets;
     workingFiles.current.add(song.uri);
-    updateEdit({ sound: 'music', music: { uri: song.uri, name: song.name } });
+    updateEdit({ sound: 'music', music: { kind: 'file', uri: song.uri, name: song.name } });
   };
 
   const addClips = async () => {
@@ -321,6 +318,7 @@ export default function VideoEditorScreen() {
     saving.current = true;
     cancelRequested.current = false;
     player.pause();
+    musicPreview.stopListening();
     setBusy({ title: 'Saving video…', progress: 0, cancellable: true });
     const subscription = SchoolMedia.addListener('onRenderProgress', ({ progress }) =>
       setBusy((current) => (current ? { ...current, progress } : current))
@@ -329,9 +327,11 @@ export default function VideoEditorScreen() {
     try {
       await activateKeepAwakeAsync(KEEP_AWAKE_TAG);
       await waitForPaint();
+      const chosenMusic = edit.sound === 'music' ? edit.music : null;
+      const musicUri = chosenMusic ? await musicFileUri(chosenMusic) : null;
       overlayUri = renderOverlayLayer(edit, outputSizeFor(edit), assets);
       const spec = renderSpecSchema.parse({
-        ...buildRenderSpec(edit, overlayUri),
+        ...buildRenderSpec(edit, overlayUri, musicUri),
         fileName: outputName('mp4'),
       });
       if (cancelRequested.current) {
@@ -412,6 +412,7 @@ export default function VideoEditorScreen() {
   };
 
   const changeTool = (next: Tool) => {
+    musicPreview.stopListening();
     setTool(next);
   };
 
@@ -453,7 +454,16 @@ export default function VideoEditorScreen() {
       case 'shape':
         return <VideoShapePanel edit={edit} onChange={updateEdit} activeClip={activeClip} />;
       case 'sound':
-        return <SoundPanel edit={edit} onChange={updateEdit} onPickMusic={pickMusic} />;
+        return (
+          <SoundPanel
+            edit={edit}
+            onChange={updateEdit}
+            listeningTo={musicPreview.listeningTo}
+            onListen={musicPreview.listen}
+            onStopListening={musicPreview.stopListening}
+            onPickMusic={pickMusic}
+          />
+        );
       case 'text':
         return (
           <View className="gap-5">

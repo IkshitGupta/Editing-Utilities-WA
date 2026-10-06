@@ -1,8 +1,13 @@
 package expo.modules.schoolmedia
 
+import kotlin.math.min
+import kotlin.math.roundToLong
+
 // Kept free of Android classes so it can be unit tested on the JVM.
 object RenderMath {
   private const val EDGE_TOLERANCE = 0.0005
+  private const val MIN_FADE_US = 1000L
+  private const val MAX_FULL_VOLUME_STRETCH_S = 60L
 
   data class NdcRect(val left: Float, val right: Float, val bottom: Float, val top: Float)
 
@@ -51,4 +56,31 @@ object RenderMath {
 
   // Media3 reports an unknown duration as a large negative number.
   fun knownDurationMs(durationMs: Long): Long = if (durationMs > 0) durationMs else 0
+
+  data class Fade(val startUs: Long, val durationUs: Long)
+
+  // Joined clips play one after another, so the video lasts as long as their kept parts together.
+  fun keptDurationMs(clips: List<Pair<Double, Double>>): Double =
+    clips.sumOf { (startMs, endMs) -> (endMs - startMs).coerceAtLeast(0.0) }
+
+  // Places a fade of the given length at the very end of the video. Returns null when there is
+  // nothing to fade.
+  fun closingFade(videoMs: Double, fadeMs: Double): Fade? {
+    val videoUs = (videoMs * 1000).roundToLong()
+    val fadeUs = (fadeMs * 1000).roundToLong().coerceAtMost(videoUs)
+    if (fadeUs < MIN_FADE_US) {
+      return null
+    }
+    return Fade(startUs = videoUs - fadeUs, durationUs = fadeUs)
+  }
+
+  // Media3 counts the bytes up to the next change in volume in an int, which overflows when the
+  // closing fade of a very long video is hours away, so a stretch at full volume is reported a
+  // minute at a time. Media3's special negative values pass through unchanged.
+  fun fullVolumeUntil(nextChange: Long, samplePosition: Long, sampleRate: Int): Long =
+    if (nextChange < 0) {
+      nextChange
+    } else {
+      min(nextChange, samplePosition + sampleRate * MAX_FULL_VOLUME_STRETCH_S)
+    }
 }

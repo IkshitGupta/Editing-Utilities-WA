@@ -84,11 +84,13 @@ On **Home**, tap **Edit a video** and pick one or more videos. Several videos ar
 
 - **Trim**: drag the handles to set the start and end. **Save frame as thumbnail** saves the current frame as a 1280 × 720 picture for YouTube.
 - **Shape**: choose Original, Wide 16:9, Tall 9:16 (for Shorts and Reels) or Square, set the **Position** of the part to keep, and rotate the video.
-- **Sound**: keep the original sound, mute it, or add music from a song on the phone. You can keep the original sound in the background under the music. The music plays in the saved video, not in the preview.
+- **Sound**: keep the original sound, mute it, or tap **Add music**. Choose one of the built-in tunes, grouped by mood (cheerful, playful, birthday, gentle, heartfelt and energetic), or tap **Choose from phone…** to use a song on the phone. Tap **Listen** to hear a tune first. The chosen music plays with the preview and repeats until the end of the video. You can keep the original sound in the background under the music.
 - **Logo & text**: add the school logo, solid or as a watermark, and a caption.
 - **Clips**: add more clips, change their order or remove one.
 
 Tap **Save video**. Keep the app open while it saves; the screen stays on until it's done. The video keeps the original's size, up to 4K, and its detail. HDR videos are converted to standard colour so they look right on every phone.
+
+The built-in tunes are free to use in school videos and need no credit. Now and then YouTube or Facebook wrongly flags free music. If that happens, dispute the claim: the tunes are in the public domain, and Happy Birthday is an arrangement of the public-domain melody made for the app. Whoever looks after the app has the record of where each tune came from (`assets/music/CREDITS.md`).
 
 ## The Media tab
 

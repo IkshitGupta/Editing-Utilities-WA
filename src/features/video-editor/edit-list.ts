@@ -5,6 +5,7 @@ import type { Rotation } from '@/features/image-editor/types';
 import type { LogoSetting, TextOverlay } from '@/features/overlays/types';
 import { clamp } from '@/lib/utils';
 
+import { ORIGINAL_VOLUME_UNDER_MUSIC, musicFadeOutMs } from './music-mix';
 import {
   MAX_VIDEO_BITRATE,
   VIDEO_SHAPES,
@@ -33,6 +34,10 @@ export type VideoClip = {
 
 export type SoundMode = 'original' | 'mute' | 'music';
 
+// A tune bundled with the app, or a song chosen from the phone.
+export type MusicChoice =
+  { kind: 'tune'; tuneId: string } | { kind: 'file'; uri: string; name: string };
+
 export type VideoEdit = {
   clips: VideoClip[];
   rotation: Rotation;
@@ -40,16 +45,13 @@ export type VideoEdit = {
   // Slides the crop from one side (-1) through the centre (0) to the other (1).
   position: number;
   sound: SoundMode;
-  music: { uri: string; name: string } | null;
+  music: MusicChoice | null;
   musicVolume: number;
   // Whether the video's own sound plays under the music.
   mixOriginal: boolean;
   logo: LogoSetting;
   caption: TextOverlay | null;
 };
-
-// The video's own sound is lowered so speech does not fight the music.
-const ORIGINAL_VOLUME_UNDER_MUSIC = 0.35;
 
 const unit = z.number().min(0).max(1);
 
@@ -89,6 +91,8 @@ export const renderSpecSchema = z.object({
   originalVolume: unit,
   musicUri: z.string().min(1).nullable(),
   musicVolume: unit,
+  // How long the sound fades out at the end of the video; 0 keeps it to the last moment.
+  fadeOutMs: z.number().min(0).max(10_000),
   overlayUri: z.string().min(1).nullable(),
   fileName: z
     .string()
@@ -141,22 +145,29 @@ export function outputSizeFor(edit: VideoEdit) {
   return outputVideoSize(outputAspect(edit), Math.max(...shortSides));
 }
 
-export function buildRenderSpec(edit: VideoEdit, overlayUri: string | null): RenderSpecInput {
+// `musicFile` is the chosen music as a file the phone can read, or null when there is none.
+export function buildRenderSpec(
+  edit: VideoEdit,
+  overlayUri: string | null,
+  musicFile: string | null
+): RenderSpecInput {
   const size = outputSizeFor(edit);
   const bitrate = videoBitrate(size, edit.clips);
-  const musicUri = edit.sound === 'music' && edit.music ? edit.music.uri : null;
+  const musicUri = edit.sound === 'music' && edit.music ? musicFile : null;
   const keepOriginalAudio =
     edit.sound === 'original' || (edit.sound === 'music' && (edit.mixOriginal || !musicUri));
+  const clips = edit.clips.map((clip) => {
+    const crop = clipCrop(clip, edit);
+    return {
+      uri: clip.uri,
+      startMs: Math.round(clip.startMs),
+      endMs: Math.round(clip.endMs),
+      crop: isFullFrame(crop) ? null : crop,
+    };
+  });
+  const videoMs = clips.reduce((total, clip) => total + Math.max(0, clip.endMs - clip.startMs), 0);
   return {
-    clips: edit.clips.map((clip) => {
-      const crop = clipCrop(clip, edit);
-      return {
-        uri: clip.uri,
-        startMs: Math.round(clip.startMs),
-        endMs: Math.round(clip.endMs),
-        crop: isFullFrame(crop) ? null : crop,
-      };
-    }),
+    clips,
     rotationDegrees: edit.rotation,
     width: size.width,
     height: size.height,
@@ -165,6 +176,7 @@ export function buildRenderSpec(edit: VideoEdit, overlayUri: string | null): Ren
     originalVolume: musicUri ? ORIGINAL_VOLUME_UNDER_MUSIC : 1,
     musicUri,
     musicVolume: edit.musicVolume,
+    fadeOutMs: musicUri ? musicFadeOutMs(videoMs) : 0,
     overlayUri,
   };
 }

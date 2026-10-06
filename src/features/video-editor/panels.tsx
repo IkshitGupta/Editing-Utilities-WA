@@ -12,6 +12,7 @@ import { brand, ui } from '@/theme/colors';
 
 import { clipCrop, type SoundMode, type VideoClip, type VideoEdit } from './edit-list';
 import { VIDEO_SHAPES, type VideoShapeId } from './presets';
+import { TUNES, TUNE_MOODS, type Tune } from './tunes';
 
 type PanelProps = {
   edit: VideoEdit;
@@ -109,30 +110,82 @@ function volumeKey(volume: number): (typeof VOLUME_OPTIONS)[number]['value'] {
   return volume < 0.8 ? '0.6' : '1';
 }
 
+type TuneRowProps = {
+  tune: Tune;
+  selected: boolean;
+  listening: boolean;
+  onSelect: () => void;
+  onListen: () => void;
+  onStop: () => void;
+};
+
+function TuneRow({ tune, selected, listening, onSelect, onListen, onStop }: TuneRowProps) {
+  return (
+    <Pressable
+      accessibilityRole="radio"
+      accessibilityState={{ checked: selected }}
+      accessibilityLabel={tune.title}
+      onPress={onSelect}
+      className={cn(
+        'flex-row items-center gap-3 rounded-xl border py-1 pl-3 pr-1',
+        selected ? 'border-brand-blue bg-brand-blue/10' : 'border-border bg-background'
+      )}>
+      <Icon
+        name={selected ? 'radio-button-on' : 'radio-button-off'}
+        size={20}
+        color={selected ? brand.blue : ui.muted}
+      />
+      <Text className="flex-1 text-base text-foreground" numberOfLines={1}>
+        {tune.title}
+      </Text>
+      <Text className="text-sm text-muted">{formatDuration(tune.durationMs)}</Text>
+      <Button
+        size="sm"
+        variant="ghost"
+        icon={listening ? 'stop' : 'play'}
+        label={listening ? 'Stop' : 'Listen'}
+        accessibilityLabel={listening ? `Stop ${tune.title}` : `Listen to ${tune.title}`}
+        onPress={listening ? onStop : onListen}
+      />
+    </Pressable>
+  );
+}
+
 type SoundPanelProps = PanelProps & {
+  listeningTo: string | null;
+  onListen: (tune: Tune) => void;
+  onStopListening: () => void;
   onPickMusic: () => void;
 };
 
-export function SoundPanel({ edit, onChange, onPickMusic }: SoundPanelProps) {
+export function SoundPanel({
+  edit,
+  onChange,
+  listeningTo,
+  onListen,
+  onStopListening,
+  onPickMusic,
+}: SoundPanelProps) {
+  const music = edit.music;
   const chooseSound = (sound: SoundMode) => {
-    if (sound === 'music' && !edit.music) {
-      onPickMusic();
+    if (sound !== 'music') {
+      onStopListening();
+      onChange({ sound });
       return;
     }
-    onChange({ sound });
+    // One tap adds music: the first tune plays until another one is chosen.
+    onChange(music ? { sound } : { sound, music: { kind: 'tune', tuneId: TUNES[0].id } });
+  };
+  const chooseTune = (tune: Tune) => {
+    if (music?.kind !== 'tune' || music.tuneId !== tune.id) {
+      onChange({ music: { kind: 'tune', tuneId: tune.id } });
+    }
   };
   return (
     <View className="gap-4">
       <ChoiceChips options={SOUND_OPTIONS} value={edit.sound} onChange={chooseSound} />
-      {edit.sound === 'music' && edit.music ? (
+      {edit.sound === 'music' && music ? (
         <>
-          <View className="flex-row items-center gap-3 rounded-xl border border-border px-4 py-3">
-            <Icon name="musical-note" size={20} color={brand.magenta} />
-            <Text className="flex-1 text-base text-foreground" numberOfLines={1}>
-              {edit.music.name}
-            </Text>
-            <Button size="sm" variant="ghost" label="Change" onPress={onPickMusic} />
-          </View>
           <Section title="Music volume">
             <ChoiceChips
               options={VOLUME_OPTIONS}
@@ -151,9 +204,39 @@ export function SoundPanel({ edit, onChange, onPickMusic }: SoundPanelProps) {
               thumbColor="#FFFFFF"
             />
           </View>
-          <Text className="text-sm text-muted">
-            The music loops until the video ends. It plays in the saved video, not in this preview.
-          </Text>
+          {TUNE_MOODS.map((mood) => (
+            <Section key={mood.id} title={mood.label}>
+              {TUNES.filter((tune) => tune.mood === mood.id).map((tune) => (
+                <TuneRow
+                  key={tune.id}
+                  tune={tune}
+                  selected={music.kind === 'tune' && music.tuneId === tune.id}
+                  listening={listeningTo === tune.id}
+                  onSelect={() => chooseTune(tune)}
+                  onListen={() => onListen(tune)}
+                  onStop={onStopListening}
+                />
+              ))}
+            </Section>
+          ))}
+          <Section title="From the phone">
+            {music.kind === 'file' ? (
+              <View className="flex-row items-center gap-3 rounded-xl border border-brand-blue bg-brand-blue/10 py-1 pl-3 pr-1">
+                <Icon name="radio-button-on" size={20} color={brand.blue} />
+                <Text className="flex-1 text-base text-foreground" numberOfLines={1}>
+                  {music.name}
+                </Text>
+                <Button size="sm" variant="ghost" label="Change" onPress={onPickMusic} />
+              </View>
+            ) : (
+              <Button
+                variant="secondary"
+                icon="folder-open-outline"
+                label="Choose from phone…"
+                onPress={onPickMusic}
+              />
+            )}
+          </Section>
         </>
       ) : null}
     </View>

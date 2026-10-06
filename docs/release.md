@@ -135,3 +135,5 @@ These still need a real phone:
 - [ ] Share a video to YouTube, sign in and upload it.
 - [ ] Pinch to zoom a photo and to resize text.
 - [ ] Pause a portrait video recorded on the phone, save the frame as a thumbnail and check it's the right way up and matches the picture the preview shows after saving.
+- [ ] In a video's **Sound** tab, **Listen** to a few tunes. Listen to the selected tune to its end, then play the video from the start: the music should play. Check the music stays in step, without repeated small jumps, after pausing, after moving along the frame strip and on the second clip of a joined video, also with Bluetooth headphones. Switching to another clip while it plays should stop the music with the video, and play should still work afterwards. The saved video should play the same music and fade out at the end.
+- [ ] With music playing in another app, play a video preview that has music: the other app should pause, and resume after you leave the editor. During the preview, take a call or start music in another app: the preview should pause.

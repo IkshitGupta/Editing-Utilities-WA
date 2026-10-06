@@ -40,7 +40,7 @@ const edit = (patch: Partial<VideoEdit> = {}): VideoEdit => ({
 
 describe('render spec', () => {
   it('builds a valid spec that keeps the video’s size and bitrate', () => {
-    const spec = renderSpecSchema.parse(buildRenderSpec(edit(), null));
+    const spec = renderSpecSchema.parse(buildRenderSpec(edit(), null, null));
     expect(spec).toMatchObject({
       rotationDegrees: 0,
       width: 1920,
@@ -49,6 +49,7 @@ describe('render spec', () => {
       keepOriginalAudio: true,
       originalVolume: 1,
       musicUri: null,
+      fadeOutMs: 0,
       overlayUri: null,
     });
     expect(spec.clips).toEqual([
@@ -58,7 +59,7 @@ describe('render spec', () => {
 
   it('crops every joined clip to the first clip’s shape', () => {
     const portrait = clip({ id: 'b', width: 1080, height: 1920 });
-    const spec = buildRenderSpec(edit({ clips: [clip(), portrait] }), null);
+    const spec = buildRenderSpec(edit({ clips: [clip(), portrait] }), null, null);
     expect(spec.clips[0].crop).toBeNull();
     expect(spec.clips[1].crop).not.toBeNull();
     expect(outputAspect(edit({ clips: [clip(), portrait] }))).toBeCloseTo(16 / 9);
@@ -66,48 +67,75 @@ describe('render spec', () => {
 
   it('sizes joined clips by the sharpest one', () => {
     const small = clip({ id: 'b', width: 1280, height: 720, bitrate: 4_000_000 });
-    expect(buildRenderSpec(edit({ clips: [small, clip()] }), null)).toMatchObject({
+    expect(buildRenderSpec(edit({ clips: [small, clip()] }), null, null)).toMatchObject({
       width: 1920,
       height: 1080,
     });
   });
 
   it('turns the output when the video is rotated', () => {
-    const spec = buildRenderSpec(edit({ rotation: 90 }), null);
+    const spec = buildRenderSpec(edit({ rotation: 90 }), null, null);
     expect(spec).toMatchObject({ rotationDegrees: 90, width: 1080, height: 1920 });
   });
 
   it('mutes the video', () => {
-    expect(buildRenderSpec(edit({ sound: 'mute' }), null)).toMatchObject({
+    expect(buildRenderSpec(edit({ sound: 'mute' }), null, null)).toMatchObject({
       keepOriginalAudio: false,
       musicUri: null,
     });
   });
 
   it('replaces the sound with music, or mixes it quietly', () => {
-    const music = { uri: 'file:///cache/song.mp3', name: 'song.mp3' };
-    expect(buildRenderSpec(edit({ sound: 'music', music }), null)).toMatchObject({
+    const music = { kind: 'file', uri: 'file:///cache/song.mp3', name: 'song.mp3' } as const;
+    expect(buildRenderSpec(edit({ sound: 'music', music }), null, music.uri)).toMatchObject({
       keepOriginalAudio: false,
       musicUri: music.uri,
       originalVolume: 0.35,
+      fadeOutMs: 2000,
     });
-    expect(buildRenderSpec(edit({ sound: 'music', music, mixOriginal: true }), null)).toMatchObject(
-      {
-        keepOriginalAudio: true,
-        musicUri: music.uri,
-      }
+    expect(
+      buildRenderSpec(edit({ sound: 'music', music, mixOriginal: true }), null, music.uri)
+    ).toMatchObject({
+      keepOriginalAudio: true,
+      musicUri: music.uri,
+    });
+  });
+
+  it('plays a bundled tune from the file the app prepared for it', () => {
+    const music = { kind: 'tune', tuneId: 'cheerful-ukulele-song' } as const;
+    const file = 'file:///data/user/0/app/cache/ExponentAsset-0a1b.m4a';
+    const spec = renderSpecSchema.parse(
+      buildRenderSpec(edit({ sound: 'music', music }), null, file)
     );
+    expect(spec).toMatchObject({ musicUri: file, keepOriginalAudio: false, fadeOutMs: 2000 });
+  });
+
+  it('leaves the music out unless the sound is set to music', () => {
+    const music = { kind: 'tune', tuneId: 'cheerful-ukulele-song' } as const;
+    expect(buildRenderSpec(edit({ music }), null, 'file:///cache/tune.m4a')).toMatchObject({
+      keepOriginalAudio: true,
+      originalVolume: 1,
+      musicUri: null,
+      fadeOutMs: 0,
+    });
+  });
+
+  it('fades out over the last quarter of a very short video', () => {
+    const music = { kind: 'tune', tuneId: 'cheerful-ukulele-song' } as const;
+    const short = edit({ clips: [clip({ startMs: 1_000, endMs: 3_000 })], sound: 'music', music });
+    expect(buildRenderSpec(short, null, 'file:///cache/tune.m4a').fadeOutMs).toBe(500);
   });
 
   it('keeps the original sound when music was chosen but no song was picked', () => {
-    expect(buildRenderSpec(edit({ sound: 'music' }), null)).toMatchObject({
+    expect(buildRenderSpec(edit({ sound: 'music' }), null, null)).toMatchObject({
       keepOriginalAudio: true,
       musicUri: null,
+      fadeOutMs: 0,
     });
   });
 
   it('makes a tall video without enlarging the cropped picture', () => {
-    expect(buildRenderSpec(edit({ shape: 'tall' }), null)).toMatchObject({
+    expect(buildRenderSpec(edit({ shape: 'tall' }), null, null)).toMatchObject({
       width: 608,
       height: 1080,
     });
@@ -123,18 +151,22 @@ describe('render spec', () => {
   });
 
   it('rejects clips shorter than half a second', () => {
-    const spec = buildRenderSpec(edit({ clips: [clip({ startMs: 1_000, endMs: 1_200 })] }), null);
+    const spec = buildRenderSpec(
+      edit({ clips: [clip({ startMs: 1_000, endMs: 1_200 })] }),
+      null,
+      null
+    );
     expect(renderSpecSchema.safeParse(spec).success).toBe(false);
   });
 
   it('rejects odd sizes and empty clip lists', () => {
-    const spec = buildRenderSpec(edit(), null);
+    const spec = buildRenderSpec(edit(), null, null);
     expect(renderSpecSchema.safeParse({ ...spec, width: 1281 }).success).toBe(false);
     expect(renderSpecSchema.safeParse({ ...spec, clips: [] }).success).toBe(false);
   });
 
   it('accepts only plain MP4 file names for the saved video', () => {
-    const spec = buildRenderSpec(edit(), null);
+    const spec = buildRenderSpec(edit(), null, null);
     const named = (fileName: string) => renderSpecSchema.safeParse({ ...spec, fileName }).success;
     expect(named('walnut-academy-20261005-112931-d4fz.mp4')).toBe(true);
     expect(named('../video.mp4')).toBe(false);
@@ -150,7 +182,7 @@ describe('trimming', () => {
       trimmed = trimClip(trimmed, 'start', 0.4);
     }
     expect(trimmed.startMs).toBeCloseTo(4);
-    expect(buildRenderSpec(edit({ clips: [trimmed] }), null).clips[0].startMs).toBe(4);
+    expect(buildRenderSpec(edit({ clips: [trimmed] }), null, null).clips[0].startMs).toBe(4);
   });
 
   it('keeps both handles inside the video', () => {

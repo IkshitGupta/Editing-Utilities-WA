@@ -35,6 +35,9 @@ class RenderSpec : Record {
   @Field val musicUri: String? = null
   @Field val musicVolume: Double = 0.5
 
+  // How long the sound fades out at the end of the video; 0 keeps it to the last moment.
+  @Field val fadeOutMs: Double = 0.0
+
   // A transparent PNG at the output size holding the logo and text.
   @Field val overlayUri: String? = null
 

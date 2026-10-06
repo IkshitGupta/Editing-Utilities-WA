@@ -176,9 +176,44 @@ class VideoRenderer(
       )
     }
 
-    return Composition.Builder(sequences)
+    val composition = Composition.Builder(sequences)
       .setHdrMode(Composition.HDR_MODE_TONE_MAP_HDR_TO_SDR_USING_OPEN_GL)
+    closingFade(spec)?.let { fade ->
+      composition.setEffects(Effects(listOf(fade), emptyList()))
+    }
+    return composition.build()
+  }
+
+  // With music, the mixed sound (the music and any original sound kept under it) fades out at
+  // the end of the video, so the music ends gently instead of stopping mid-phrase. The fade has
+  // its own processor at full volume, because a fade replaces a processor's volume rather than
+  // scaling it.
+  private fun closingFade(spec: RenderSpec): AudioProcessor? {
+    if (spec.musicUri == null) {
+      return null
+    }
+    val videoMs = RenderMath.keptDurationMs(spec.clips.map { Pair(it.startMs, it.endMs) })
+    val fade = RenderMath.closingFade(videoMs, spec.fadeOutMs) ?: return null
+    val gain = DefaultGainProvider.Builder(1f)
+      .addFadeAt(fade.startUs, fade.durationUs, DefaultGainProvider.FADE_OUT_EQUAL_POWER)
+      // Sound past the expected end stays silent, so the music can't return for a moment.
+      .addFadeAt(fade.startUs + fade.durationUs, SILENT_TAIL_US) { _, _ -> 0f }
       .build()
+    return GainProcessor(ShortFullVolumeStretches(gain))
+  }
+
+  private class ShortFullVolumeStretches(
+    private val gain: GainProcessor.GainProvider
+  ) : GainProcessor.GainProvider {
+    override fun getGainFactorAtSamplePosition(samplePosition: Long, sampleRate: Int): Float =
+      gain.getGainFactorAtSamplePosition(samplePosition, sampleRate)
+
+    override fun isUnityUntil(samplePosition: Long, sampleRate: Int): Long =
+      RenderMath.fullVolumeUntil(
+        gain.isUnityUntil(samplePosition, sampleRate),
+        samplePosition,
+        sampleRate
+      )
   }
 
   private fun buildClip(clip: ClipSpec, spec: RenderSpec, overlayBitmap: Bitmap?): EditedMediaItem {
@@ -246,6 +281,7 @@ class VideoRenderer(
     private val OUTPUT_NAME = Regex("[A-Za-z0-9_-]+\\.mp4")
     private const val PROGRESS_INTERVAL_MS = 500L
     private const val FULL_VOLUME = 0.999
+    private const val SILENT_TAIL_US = 3_600_000_000L
 
     // Phones record stereo sound at about 256 kbps; 192 kbps AAC keeps it clear.
     private const val AUDIO_BITRATE = 192_000

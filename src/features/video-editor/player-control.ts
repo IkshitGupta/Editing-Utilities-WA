@@ -15,8 +15,19 @@ export function currentTimeMs(player: VideoPlayer): number {
   return Math.round(player.currentTime * 1000);
 }
 
-export function setMuted(player: VideoPlayer, muted: boolean) {
-  player.muted = muted;
+// A level of 0 mutes the video's own sound.
+export function setSoundLevel(player: VideoPlayer, level: number) {
+  player.volume = Math.max(0, level);
+  player.muted = level <= 0;
+}
+
+// While music is chosen, the music player holds audio focus as it plays and the video mixes with
+// it, so neither pauses the other. Otherwise the video takes audio focus as usual.
+export function setMixesWithMusic(player: VideoPlayer, mixes: boolean) {
+  const mode = mixes ? 'mixWithOthers' : 'auto';
+  if (player.audioMixingMode !== mode) {
+    player.audioMixingMode = mode;
+  }
 }
 
 export function configurePlayer(player: VideoPlayer) {
