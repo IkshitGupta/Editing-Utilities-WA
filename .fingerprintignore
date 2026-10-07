@@ -1,0 +1,3 @@
+# @react-native-masked-view/masked-view removes the package attribute from its own manifest during
+# every Android build, so after a local build the file no longer matches a fresh install on EAS.
+node_modules/@react-native-masked-view/masked-view/android/src/main/AndroidManifest.xml

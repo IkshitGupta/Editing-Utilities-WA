@@ -39,6 +39,8 @@ Installing over USB with `adb install` isn't affected, which helps while testing
 
 All three produce an APK with the same package name, so a development or preview build replaces the installed app. Install them on a test phone, not the school phone.
 
+EAS builds contain only ARM code, so test them on a phone. An x86_64 emulator can't start them, even one that runs ARM apps: React Native looks for x86_64 libraries inside the APK and stops with `couldn't find DSO to load: libreactnative.so`.
+
 ## Building
 
 ```sh
@@ -103,6 +105,8 @@ eas update --channel production --message "Describe the change"
 The app downloads the update in the background when it opens and uses it from the next start. **Settings > Check for updates** applies it straight away.
 
 Native changes need a new APK: the Kotlin module, native packages, `app.json` plugins or permissions, and Expo SDK upgrades. The runtime version is a fingerprint of the native code, so an update only reaches builds with matching native code. After a native change, build and install a new APK, then publish updates as usual.
+
+If **Check for updates** says the app is up to date after you publish, compare the runtime version `eas update` printed with the one on the installed build's page on expo.dev. A difference means the update needs a new APK, or the PC's `node_modules` differs from a fresh install (see the update fingerprint note in the README).
 
 ## Phone checklist
 
