@@ -16,3 +16,9 @@ export function formatDuration(ms: number | null | undefined): string {
 export function plural(count: number, one: string, many: string = `${one}s`): string {
   return `${count} ${count === 1 ? one : many}`;
 }
+
+// Pasted text can bring line breaks and tabs even into single-line fields. The next-line character
+// counts too, though JavaScript doesn't treat it as whitespace.
+export function oneLine(value: string): string {
+  return value.replace(/[\s\u0085]+/g, ' ').trim();
+}

@@ -77,7 +77,12 @@ export default function NoticeCardScreen() {
   const previewWidth = windowWidth - 32;
   const scale = previewWidth / cardSize.width;
   const notice: Notice = { title, body, date };
-  const school = { name: settings.schoolName, address: settings.address, phone: settings.phone };
+  const school = {
+    name: settings.schoolName,
+    address: settings.address,
+    phone: settings.phone,
+    website: settings.website,
+  };
   const assets = { fonts, logo };
 
   const recorder = Skia.PictureRecorder();
@@ -99,9 +104,6 @@ export default function NoticeCardScreen() {
   const warnings = [
     preview.overflow.title ? 'The title is too long to fit on two lines. Shorten it.' : null,
     preview.overflow.body ? bodyWarning : null,
-    preview.overflow.school
-      ? 'The school name, address or phone is too long to fit. Shorten it in Settings.'
-      : null,
   ].filter((warning): warning is string => warning !== null);
 
   const save = async () => {
@@ -214,7 +216,7 @@ export default function NoticeCardScreen() {
           />
         </Section>
         <Text className="text-sm text-muted">
-          School name, logo, address and phone are taken from Settings.
+          The logo and school details are taken from Settings.
         </Text>
       </ScrollView>
       <View

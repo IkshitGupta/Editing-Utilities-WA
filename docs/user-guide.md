@@ -8,7 +8,7 @@ Walnut Admin gets the school's photos, videos and notices ready on your phone an
 2. Download the file, open it and tap **Install**. If the phone asks, allow your browser to install apps.
 3. Open **Walnut Admin**. On Android 10 or older, allow access to photos and videos when asked.
 
-The school name, logo, address and phone are already filled in. You can change them in **Settings**.
+The school name, logo, address, phone and website are already filled in. You can change them in **Settings**.
 
 ## Set up WhatsApp class groups (once)
 
@@ -64,7 +64,7 @@ The app saves photos and videos at full quality. Tap **HD** in WhatsApp so they 
 3. Choose a design (Letterhead, Colour band or Simple), colours and size (Square, or Portrait 4:5 for longer notices).
 4. Tap **Save notice card**. The share buttons appear straight away.
 
-If the title, the notice or the school details are too long to fit, the app says which. Shorten it, or choose Portrait 4:5 for a longer notice.
+If the title or the notice is too long to fit, the app says which. Shorten it, or choose Portrait 4:5 for a longer notice.
 
 ## Edit photos
 
@@ -98,7 +98,7 @@ Everything you save goes into the **School Admin** album on the phone and shows 
 
 ## Settings
 
-- **School details**: the name, address and phone shown on notice cards. **Reset** puts back the original details.
+- **School details**: the name, address, phone and website shown on notice cards. Leave the phone or website empty to keep it off the cards. **Reset** puts back the original details.
 - **Logo**: **Change logo** uses another picture as the logo; **Use default logo** goes back to the school logo.
 - **Sharing apps**: choose whether sharing opens WhatsApp Business or WhatsApp, and see whether Facebook and YouTube are installed.
 - **Check for updates**: gets the newest version of the app.

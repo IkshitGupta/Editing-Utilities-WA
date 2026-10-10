@@ -1,7 +1,13 @@
 import { Storage } from 'expo-sqlite/kv-store';
 import { useSyncExternalStore } from 'react';
 
-import { DEFAULT_SETTINGS, parseSettings, type Settings } from './settings';
+import {
+  DEFAULT_SETTINGS,
+  parseSettings,
+  parseStoredSettings,
+  toStoredSettings,
+  type Settings,
+} from './settings';
 
 const STORAGE_KEY = 'settings.v1';
 
@@ -11,7 +17,7 @@ const listeners = new Set<() => void>();
 function load(): Settings {
   try {
     const raw = Storage.getItemSync(STORAGE_KEY);
-    return parseSettings(raw ? JSON.parse(raw) : {});
+    return parseStoredSettings(raw ? JSON.parse(raw) : {});
   } catch {
     return DEFAULT_SETTINGS;
   }
@@ -26,7 +32,7 @@ export function getSettings(): Settings {
 
 export function updateSettings(patch: Partial<Settings>): Settings {
   const next = parseSettings({ ...getSettings(), ...patch });
-  Storage.setItemSync(STORAGE_KEY, JSON.stringify(next));
+  Storage.setItemSync(STORAGE_KEY, JSON.stringify(toStoredSettings(next)));
   cached = next;
   listeners.forEach((listener) => listener());
   return next;

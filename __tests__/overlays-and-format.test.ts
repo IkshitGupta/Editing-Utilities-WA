@@ -15,7 +15,7 @@ import {
   newTextOverlay,
   withLogoStyle,
 } from '@/features/overlays/types';
-import { formatDuration, plural } from '@/lib/format';
+import { formatDuration, oneLine, plural } from '@/lib/format';
 
 describe('overlay layout', () => {
   it('moves overlays by drag steps and keeps them on the picture', () => {
@@ -171,5 +171,10 @@ describe('formatting', () => {
   it('pluralises', () => {
     expect(plural(1, 'photo')).toBe('1 photo');
     expect(plural(3, 'photo')).toBe('3 photos');
+  });
+
+  it('puts pasted text on one line', () => {
+    expect(oneLine(' Walnut\nAcademy\r\n\tJaipur\u0085 ')).toBe('Walnut Academy Jaipur');
+    expect(oneLine('\u0085')).toBe('');
   });
 });

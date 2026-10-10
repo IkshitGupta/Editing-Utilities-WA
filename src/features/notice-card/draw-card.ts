@@ -10,9 +10,10 @@ import {
   type SkTypefaceFontProvider,
 } from '@shopify/react-native-skia';
 
+import { oneLine } from '@/lib/format';
 import { layoutParagraph } from '@/lib/skia';
 
-import { fitFontSize, formatNoticeDate } from './fit';
+import { contactText, fitFontSize, formatNoticeDate } from './fit';
 import { CARD_SIZES, THEMES, type NoticeStyle, type Theme } from './styles';
 
 export type Notice = {
@@ -25,6 +26,7 @@ export type SchoolInfo = {
   name: string;
   address: string;
   phone: string;
+  website: string;
 };
 
 export type CardAssets = {
@@ -34,7 +36,7 @@ export type CardAssets = {
 
 export type CardResult = {
   // Parts that did not fit even at their smallest size and were cut short.
-  overflow: { title: boolean; body: boolean; school: boolean };
+  overflow: { title: boolean; body: boolean };
 };
 
 const MUTED = '#4B5563';
@@ -63,14 +65,10 @@ type TextOptions = {
 
 type Header = {
   bottom: number;
-  // The school name needed more lines than the header allows.
-  cut: boolean;
 };
 
 type Footer = {
   height: number;
-  // The address and phone needed more lines than the footer allows.
-  cut: boolean;
   draw: (top: number) => void;
 };
 
@@ -90,18 +88,29 @@ function text(context: Context, value: string, options: TextOptions, width: numb
   );
 }
 
-// Lays out text within its line limit and reports whether it had to be cut short.
-function limitedText(
+// The school's details are set once in Settings, so instead of cutting them short, the card makes
+// their text smaller, as far as needed, to fit them within their lines.
+function fittedText(
   context: Context,
   value: string,
   options: TextOptions & { maxLines: number },
   width: number
-): { paragraph: SkParagraph; cut: boolean } {
-  const full = text(context, value, { ...options, maxLines: undefined }, width);
-  return {
-    paragraph: text(context, value, options, width),
-    cut: full.getLineMetrics().length > options.maxLines,
-  };
+): SkParagraph {
+  const measure = (size: number) =>
+    text(context, value, { ...options, size, maxLines: undefined }, width);
+  const full = measure(options.size);
+  if (full.getLineMetrics().length <= options.maxLines) {
+    return full;
+  }
+  const { fontSize, overflow } = fitFontSize(
+    1,
+    options.size,
+    (size) => measure(size).getLineMetrics().length <= options.maxLines
+  );
+  // Line breaks can leave more lines than the limit allows at any size. The school's details are
+  // joined so that this doesn't happen, but if it does, the text is cut at its normal size rather
+  // than drawn too small to read.
+  return text(context, value, { ...options, size: overflow ? options.size : fontSize }, width);
 }
 
 function fill(color: string) {
@@ -164,11 +173,6 @@ function drawImageInBox(
   );
 }
 
-function contactText(school: SchoolInfo): string {
-  const lines = [school.address.trim(), school.phone.trim() ? `Phone: ${school.phone.trim()}` : ''];
-  return lines.filter(Boolean).join('\n');
-}
-
 function letterheadHeader(context: Context): Header {
   const { canvas, width, margin, theme } = context;
   fillRect(canvas, 0, 0, width, width * 0.018, theme.primary);
@@ -179,7 +183,7 @@ function letterheadHeader(context: Context): Header {
   if (context.logo) {
     drawImageInBox(canvas, context.logo, margin, top, logoSize, logoSize);
   }
-  const { paragraph: name, cut } = limitedText(
+  const name = fittedText(
     context,
     context.school.name,
     { size: width * 0.058, color: theme.dark, bold: true, maxLines: 2 },
@@ -189,7 +193,7 @@ function letterheadHeader(context: Context): Header {
   name.paint(canvas, textX, top + (headerHeight - name.getHeight()) / 2);
   const ruleY = top + headerHeight + width * 0.03;
   fillRect(canvas, margin, ruleY, width - margin * 2, Math.max(3, width * 0.004), theme.primary);
-  return { bottom: ruleY + width * 0.045, cut };
+  return { bottom: ruleY + width * 0.045 };
 }
 
 function letterheadFooter(context: Context): Footer {
@@ -199,11 +203,10 @@ function letterheadFooter(context: Context): Footer {
   if (!contact) {
     return {
       height: barHeight + width * 0.03,
-      cut: false,
       draw: () => fillRect(canvas, 0, height - barHeight, width, barHeight, theme.primary),
     };
   }
-  const { paragraph, cut } = limitedText(
+  const paragraph = fittedText(
     context,
     contact,
     { size: width * 0.027, color: MUTED, align: TextAlign.Center, maxLines: 3, lineHeight: 1.25 },
@@ -213,7 +216,6 @@ function letterheadFooter(context: Context): Footer {
   const gapBelow = width * 0.03;
   return {
     height: gapAbove + paragraph.getHeight() + gapBelow + barHeight,
-    cut,
     draw: (top) => {
       fillRect(canvas, margin, top, width - margin * 2, 2, DIVIDER);
       paragraph.paint(canvas, margin, top + gapAbove);
@@ -245,14 +247,14 @@ function bandHeader(context: Context): Header {
     );
     textX = margin + radius * 2 + width * 0.035;
   }
-  const { paragraph: name, cut } = limitedText(
+  const name = fittedText(
     context,
     context.school.name,
     { size: width * 0.058, color: theme.onPrimary, bold: true, maxLines: 2 },
     width - margin - textX
   );
   name.paint(canvas, textX, (bandHeight - name.getHeight()) / 2);
-  return { bottom: bandHeight + width * 0.06, cut };
+  return { bottom: bandHeight + width * 0.06 };
 }
 
 function bandFooter(context: Context): Footer {
@@ -262,11 +264,10 @@ function bandFooter(context: Context): Footer {
     const strip = width * 0.03;
     return {
       height: strip + width * 0.03,
-      cut: false,
       draw: () => fillRect(canvas, 0, height - strip, width, strip, theme.primary),
     };
   }
-  const { paragraph, cut } = limitedText(
+  const paragraph = fittedText(
     context,
     contact,
     {
@@ -282,7 +283,6 @@ function bandFooter(context: Context): Footer {
   const bandHeight = paragraph.getHeight() + padding * 2;
   return {
     height: bandHeight + width * 0.03,
-    cut,
     draw: () => {
       fillRect(canvas, 0, height - bandHeight, width, bandHeight, theme.primary);
       paragraph.paint(canvas, margin, height - bandHeight + padding);
@@ -312,7 +312,7 @@ function minimalHeader(context: Context): Header {
     drawImageInBox(canvas, context.logo, (width - logoSize) / 2, y, logoSize, logoSize);
     y += logoSize + width * 0.02;
   }
-  const { paragraph: name, cut } = limitedText(
+  const name = fittedText(
     context,
     context.school.name,
     { size: width * 0.05, color: theme.dark, bold: true, align: TextAlign.Center, maxLines: 2 },
@@ -328,16 +328,16 @@ function minimalHeader(context: Context): Header {
     Math.max(3, width * 0.005),
     theme.accent
   );
-  return { bottom: y + width * 0.045, cut };
+  return { bottom: y + width * 0.045 };
 }
 
 function minimalFooter(context: Context): Footer {
   const { canvas, width, margin } = context;
   const contact = contactText(context.school);
   if (!contact) {
-    return { height: width * 0.07, cut: false, draw: () => undefined };
+    return { height: width * 0.07, draw: () => undefined };
   }
-  const { paragraph, cut } = limitedText(
+  const paragraph = fittedText(
     context,
     contact,
     { size: width * 0.026, color: MUTED, align: TextAlign.Center, maxLines: 3, lineHeight: 1.25 },
@@ -346,7 +346,6 @@ function minimalFooter(context: Context): Footer {
   const gapBelow = width * 0.07;
   return {
     height: paragraph.getHeight() + gapBelow + width * 0.02,
-    cut,
     draw: (top) => paragraph.paint(canvas, margin, top + width * 0.02),
   };
 }
@@ -489,7 +488,7 @@ export function drawNoticeCard(
     theme: THEMES[style.theme],
     fonts: assets.fonts,
     logo: assets.logo,
-    school,
+    school: { ...school, name: oneLine(school.name) },
   };
   canvas.drawColor(Skia.Color('#FFFFFF'));
 
@@ -523,5 +522,5 @@ export function drawNoticeCard(
     centerVertically: style.design === 'minimal',
   });
   footer.draw(footerTop);
-  return { overflow: { title: title.cut, body: bodyCut, school: header.cut || footer.cut } };
+  return { overflow: { title: title.cut, body: bodyCut } };
 }

@@ -18,6 +18,7 @@ import { updateSettings, useSettings } from '@/features/settings/store';
 import { isAppInstalled } from '@/features/share/share';
 import { APPS, type AppInfo } from '@/features/share/targets';
 import { errorCode, errorMessage } from '@/lib/errors';
+import { oneLine } from '@/lib/format';
 import { SCHOOL } from '@/school/defaults';
 import { ui } from '@/theme/colors';
 
@@ -55,6 +56,7 @@ export default function SettingsScreen() {
   const [name, setName] = useState(settings.schoolName);
   const [address, setAddress] = useState(settings.address);
   const [phone, setPhone] = useState(settings.phone);
+  const [website, setWebsite] = useState(settings.website);
   const [installed, setInstalled] = useState<Record<string, boolean>>({});
   const [checking, setChecking] = useState(false);
 
@@ -69,17 +71,24 @@ export default function SettingsScreen() {
   );
 
   const changed =
-    name !== settings.schoolName || address !== settings.address || phone !== settings.phone;
+    name !== settings.schoolName ||
+    address !== settings.address ||
+    phone !== settings.phone ||
+    website !== settings.website;
 
   const saveDetails = () => {
-    if (!name.trim()) {
+    // The name is shown on one line, on notice cards and at the top of Home, so line breaks pasted
+    // into it are removed.
+    const schoolName = oneLine(name);
+    if (!schoolName) {
       Alert.alert('School name required', 'Enter the school name before saving.');
       return;
     }
-    const next = updateSettings({ schoolName: name, address, phone });
+    const next = updateSettings({ schoolName, address, phone, website });
     setName(next.schoolName);
     setAddress(next.address);
     setPhone(next.phone);
+    setWebsite(next.website);
     Alert.alert('Details saved', 'New notice cards will use these details.');
   };
 
@@ -88,10 +97,12 @@ export default function SettingsScreen() {
       schoolName: SCHOOL.name,
       address: SCHOOL.address,
       phone: SCHOOL.phone,
+      website: SCHOOL.website,
     });
     setName(next.schoolName);
     setAddress(next.address);
     setPhone(next.phone);
+    setWebsite(next.website);
   };
 
   const pickLogo = async () => {
@@ -160,6 +171,17 @@ export default function SettingsScreen() {
               placeholder="Phone number"
               keyboardType="phone-pad"
               maxLength={30}
+            />
+            {/* No url keyboard type: on Android it drops the field's text input class, which
+                keyboards and autofill rely on. */}
+            <Input
+              value={website}
+              onChangeText={setWebsite}
+              placeholder="Website"
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoComplete="off"
+              maxLength={60}
             />
           </Section>
           <View className="flex-row gap-2">
