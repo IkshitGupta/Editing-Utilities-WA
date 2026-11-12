@@ -61,14 +61,15 @@ The app saves photos and videos at full quality. Tap **HD** in WhatsApp so they 
 
 1. On **Home**, tap **Notice card**.
 2. Type a title, or tap one of the suggestions, then type the notice. The date is today's; tap **Change** to pick another.
-3. Choose a design (Letterhead, Colour band or Simple), colours and size (Square, or Portrait 4:5 for longer notices).
-4. Tap **Save notice card**. The share buttons appear straight away.
+3. To add a photo, tap **Gallery** or **Camera** under **Photo**. The whole photo goes between the date and the notice. For a card that is just the photo with the school's details, leave the title and notice empty; it has no date. **Remove photo** takes the photo off. GIFs and moving pictures can't be used.
+4. Choose a design (Letterhead, Colour band or Simple), colours and size (Square, or Portrait 4:5 for longer notices).
+5. Tap **Save notice card**. The share buttons appear straight away.
 
-If the title or the notice is too long to fit, the app says which. Shorten it, or choose Portrait 4:5 for a longer notice.
+If the title or the notice is too long to fit, the app says which. Shorten it, or choose Portrait 4:5 for a longer notice. With a photo, keep the notice short: the photo gets most of the room, and Portrait 4:5 makes it bigger. If a Square card is too crowded for even one line of the notice with the photo, the app leaves the notice off and says so; shorten the title or choose Portrait 4:5.
 
 ## Edit photos
 
-On **Home**, tap **Edit photos** and pick one or more photos, or tap **Take a photo**. Use the tabs at the bottom:
+On **Home**, tap **Edit photos** and pick one or more photos (not GIFs or moving pictures), or tap **Take a photo**. Use the tabs at the bottom:
 
 - **Crop**: choose a shape (Original, Square, Portrait 4:5, Wide 16:9 or Tall 9:16). Drag the photo to move it and pinch to zoom. **Rotate left**, **Rotate right** and **Flip** are here too.
 - **Text**: tap **Add text**, type, and pick a colour and style. Text starts with a soft **Shadow** so it reads on any photo; choose **Background** to put it on a box. Drag the text to move it and pinch to resize it. The dashed outline marks the selected text and isn't saved.

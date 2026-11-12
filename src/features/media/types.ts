@@ -7,4 +7,6 @@ export type MediaItem = {
   width: number;
   height: number;
   durationMs: number | null;
+  // Such as image/png. Known only for photos and videos just picked or taken.
+  mimeType?: string;
 };

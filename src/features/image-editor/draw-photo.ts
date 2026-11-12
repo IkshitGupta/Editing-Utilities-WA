@@ -10,7 +10,7 @@ import {
 } from '@shopify/react-native-skia';
 
 import type { MediaItem } from '@/features/media/types';
-import { prepareImage } from '@/features/media/prepare-image';
+import { prepareImage, type PrepareOptions } from '@/features/media/prepare-image';
 import { drawOverlays, type OverlayAssets } from '@/features/overlays/draw';
 import { deleteTemporaryFile, outputFile, writeBytes } from '@/lib/files';
 import { renderToBytes } from '@/lib/skia';
@@ -91,8 +91,8 @@ export async function loadSkImage(uri: string): Promise<SkImage> {
 }
 
 // Decodes a chosen photo for editing. The upright copy made on the way is removed once read.
-export async function loadEditablePhoto(uri: string): Promise<SkImage> {
-  const prepared = await prepareImage(uri);
+export async function loadEditablePhoto(uri: string, options?: PrepareOptions): Promise<SkImage> {
+  const prepared = await prepareImage(uri, options);
   try {
     return await loadSkImage(prepared.uri);
   } finally {

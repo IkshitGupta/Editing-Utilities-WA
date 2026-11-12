@@ -1,4 +1,5 @@
 import {
+  ClipOp,
   FilterMode,
   MipmapMode,
   PaintStyle,
@@ -20,6 +21,8 @@ export type Notice = {
   title: string;
   body: string;
   date: Date;
+  // Shown whole, never cropped, between the date and the notice text.
+  photo?: SkImage | null;
 };
 
 export type SchoolInfo = {
@@ -37,11 +40,18 @@ export type CardAssets = {
 export type CardResult = {
   // Parts that did not fit even at their smallest size and were cut short.
   overflow: { title: boolean; body: boolean };
+  // A photo left no room for even one line of the notice text, so the text was left off.
+  bodyLeftOff: boolean;
 };
 
 const MUTED = '#4B5563';
 const DIVIDER = '#D1D5DB';
 const BODY_LINE_HEIGHT = 1.3;
+const BODY_MIN_SIZE = 0.026;
+// With a photo, the notice text is kept smaller, and the text with the gap above it to a share of
+// the space, so the photo always keeps most of the room.
+const PHOTO_TEXT_MAX_SIZE = 0.04;
+const PHOTO_TEXT_SHARE = 0.4;
 
 type Context = {
   canvas: SkCanvas;
@@ -143,6 +153,14 @@ function fillRoundRect(
   canvas.drawRRect(Skia.RRectXY(Skia.XYWHRect(x, y, width, height), radius, radius), fill(color));
 }
 
+// The size of an image scaled to fit inside a box without changing its shape.
+function containedSize(image: SkImage, width: number, height: number) {
+  const aspect = image.width() / image.height();
+  return width / aspect > height
+    ? { width: height * aspect, height }
+    : { width, height: width / aspect };
+}
+
 function drawImageInBox(
   canvas: SkCanvas,
   image: SkImage,
@@ -151,13 +169,7 @@ function drawImageInBox(
   width: number,
   height: number
 ) {
-  const aspect = image.width() / image.height();
-  let drawWidth = width;
-  let drawHeight = width / aspect;
-  if (drawHeight > height) {
-    drawHeight = height;
-    drawWidth = height * aspect;
-  }
+  const { width: drawWidth, height: drawHeight } = containedSize(image, width, height);
   canvas.drawImageRectOptions(
     image,
     Skia.XYWHRect(0, 0, image.width(), image.height()),
@@ -171,6 +183,30 @@ function drawImageInBox(
     MipmapMode.Linear,
     null
   );
+}
+
+// Rounded corners like the card's panels and date pill.
+function drawRoundedImage(
+  canvas: SkCanvas,
+  image: SkImage,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number
+) {
+  const target = Skia.XYWHRect(x, y, width, height);
+  canvas.save();
+  canvas.clipRRect(Skia.RRectXY(target, radius, radius), ClipOp.Intersect, true);
+  canvas.drawImageRectOptions(
+    image,
+    Skia.XYWHRect(0, 0, image.width(), image.height()),
+    target,
+    FilterMode.Linear,
+    MipmapMode.Linear,
+    null
+  );
+  canvas.restore();
 }
 
 function letterheadHeader(context: Context): Header {
@@ -417,6 +453,40 @@ function drawDate(
   return top + paragraph.getHeight() + width * 0.04;
 }
 
+// The biggest size, up to the given one, at which the notice text fits in the space. Text that
+// doesn't fit even at the smallest size is cut to the lines that do.
+function fitBodyText(
+  context: Context,
+  value: string,
+  width: number,
+  height: number,
+  maxSize: number,
+  align: TextAlign
+): { paragraph: SkParagraph; overflow: boolean } {
+  const measure = (size: number) =>
+    text(context, value, { size, color: '#111827', align, lineHeight: BODY_LINE_HEIGHT }, width);
+  const { fontSize, overflow } = fitFontSize(
+    context.width * BODY_MIN_SIZE,
+    maxSize,
+    (size) => measure(size).getHeight() <= height
+  );
+  const paragraph = overflow
+    ? text(
+        context,
+        value,
+        {
+          size: fontSize,
+          color: '#111827',
+          align,
+          lineHeight: BODY_LINE_HEIGHT,
+          maxLines: Math.max(1, Math.floor(height / (fontSize * BODY_LINE_HEIGHT))),
+        },
+        width
+      )
+    : measure(fontSize);
+  return { paragraph, overflow };
+}
+
 function drawBody(
   context: Context,
   body: string,
@@ -435,32 +505,14 @@ function drawBody(
   if (available <= 0) {
     return true;
   }
-  const measure = (size: number) =>
-    text(
-      context,
-      value,
-      { size, color: '#111827', align: options.align, lineHeight: BODY_LINE_HEIGHT },
-      boxWidth
-    );
-  const { fontSize, overflow } = fitFontSize(
-    width * 0.026,
+  const { paragraph, overflow } = fitBodyText(
+    context,
+    value,
+    boxWidth,
+    available,
     width * 0.05,
-    (size) => measure(size).getHeight() <= available
+    options.align
   );
-  const paragraph = overflow
-    ? text(
-        context,
-        value,
-        {
-          size: fontSize,
-          color: '#111827',
-          align: options.align,
-          lineHeight: BODY_LINE_HEIGHT,
-          maxLines: Math.max(1, Math.floor(available / (fontSize * BODY_LINE_HEIGHT))),
-        },
-        boxWidth
-      )
-    : measure(fontSize);
   if (options.panel) {
     fillRoundRect(canvas, margin, top, width - margin * 2, bottom - top, width * 0.03, '#FFFFFF');
   }
@@ -469,6 +521,55 @@ function drawBody(
     : 0;
   paragraph.paint(canvas, margin + padding, top + padding + offset);
   return overflow;
+}
+
+// The photo takes all the space the notice text leaves, and the two are centred together, which
+// leaves even gaps around a wide photo. The text goes straight on the card, because the colour band
+// design's white panel would take room that the photo and text need.
+function drawPhotoAndBody(
+  context: Context,
+  photo: SkImage,
+  body: string,
+  top: number,
+  bottom: number,
+  align: TextAlign
+): { cut: boolean; leftOff: boolean } {
+  const { canvas, width, margin } = context;
+  const value = body.trim();
+  const space = bottom - top;
+  const contentWidth = width - margin * 2;
+  const gap = width * 0.03;
+  const textHeight = space * PHOTO_TEXT_SHARE - gap;
+  // One line at the smallest size. The fitting rounds that size up to a whole pixel, and the text
+  // layout rounds each line's height to the nearest pixel.
+  const smallestLine = Math.round(Math.ceil(width * BODY_MIN_SIZE) * BODY_LINE_HEIGHT);
+  // Cutting text short still draws one line, which on a crowded card would take the photo's room.
+  const leftOff = value.length > 0 && textHeight < smallestLine;
+  const fitted =
+    value && !leftOff
+      ? fitBodyText(context, value, contentWidth, textHeight, width * PHOTO_TEXT_MAX_SIZE, align)
+      : null;
+  const textSpace = fitted ? fitted.paragraph.getHeight() + gap : 0;
+  const photoSize = containedSize(photo, contentWidth, Math.max(0, space - textSpace));
+  const y = top + Math.max(0, (space - photoSize.height - textSpace) / 2);
+  if (photoSize.height > 0) {
+    drawRoundedImage(
+      canvas,
+      photo,
+      margin + (contentWidth - photoSize.width) / 2,
+      y,
+      photoSize.width,
+      photoSize.height,
+      width * 0.02
+    );
+  }
+  fitted?.paragraph.paint(canvas, margin, y + photoSize.height + gap);
+  return { cut: fitted?.overflow ?? false, leftOff };
+}
+
+// A card that has only a photo, with no title or notice text, leaves out the date too.
+export function showsDate(notice: Notice): boolean {
+  return !notice.photo || notice.title.trim().length > 0 || notice.body.trim().length > 0;
 }
 
 // Draws the whole card in a coordinate space the size of the card.
@@ -508,19 +609,27 @@ export function drawNoticeCard(
   const centered = style.design !== 'letterhead';
   const align = centered ? TextAlign.Center : TextAlign.Left;
   const title = drawTitle(context, notice.title, header.bottom, TextAlign.Center);
-  const top = drawDate(
-    context,
-    notice.date,
-    title.bottom,
-    TextAlign.Center,
-    style.design === 'band'
-  );
+  const top = showsDate(notice)
+    ? drawDate(context, notice.date, title.bottom, TextAlign.Center, style.design === 'band')
+    : title.bottom;
   const footerTop = size.height - footer.height;
-  const bodyCut = drawBody(context, notice.body, top, footerTop - size.width * 0.03, {
-    align,
-    panel: style.design === 'band',
-    centerVertically: style.design === 'minimal',
-  });
+  const body = notice.photo
+    ? drawPhotoAndBody(
+        context,
+        notice.photo,
+        notice.body,
+        top,
+        footerTop - size.width * 0.03,
+        align
+      )
+    : {
+        cut: drawBody(context, notice.body, top, footerTop - size.width * 0.03, {
+          align,
+          panel: style.design === 'band',
+          centerVertically: style.design === 'minimal',
+        }),
+        leftOff: false,
+      };
   footer.draw(footerTop);
-  return { overflow: { title: title.cut, body: bodyCut } };
+  return { overflow: { title: title.cut, body: body.cut }, bodyLeftOff: body.leftOff };
 }

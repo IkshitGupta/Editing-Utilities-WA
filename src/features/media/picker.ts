@@ -17,6 +17,7 @@ function toMediaItem(asset: ImagePicker.ImagePickerAsset): MediaItem {
     width: asset.width,
     height: asset.height,
     durationMs: asset.duration ?? null,
+    mimeType: asset.mimeType,
   };
 }
 
